@@ -5,18 +5,19 @@ Requirements:
 Requirements Explanation:
 Strengths are what the paper did well, including points that you thought were convincing and/or results that are impressive. Weaknesses are the opposite: points you disagree with and/or results that are unconvincing.
 
-Summary: 
-This paper reviews the architecture and design philosophy of Internet protocol from a historical perspective, discusses main features and functionalities we expect from the Internet,  difficulties met in implementation of the architecture in various aspects and how they are solved.
+To be submitted content:
 
-objectives of Internet protocol and how it was designed and improved
-This paper talks about the historical process of how TCP/IP protocol, internet was developed over the years. The author clarifies the motivation of early stage structure of the internet protocols, analyze the functionality and features we need from a network that merging existing networks, then discuss how researchers solve all those needs by design the various aspects in architecture and implementation over years.
+Summary: 
+This paper reviews the architecture and design philosophy of Internet protocol from a historical perspective, discusses main features and functionalities we expect from the Internet,  difficulties met in implementation of the architecture in various aspects and how researchers solved them..
  
-Strengths:
-1. Fundamental goal and three aspects.
-2. Second level goal discussion.
-3. What you have learned form Survivability part.
-4.~types of services part.
-5 ~varieties of networks
-6.data grams
-7. tcp
-..
+Strengths, or points I think convincing:
+1. The article is well-organized, covers aspects of fundamental goal and several second level goals of the Internet in details, major concerns and key concepts are well addressed.
+2. As the paper states, though there are a list of second level goals of the Internet, it should be considered as a set of priorities which shape the design of the Internet, a convincing example is the survivability of the Internet during wartime.
+3. The fate-sharing model is favored upon replication for that the former can protect against any number of intermediate failures while the later depends number of replicated copies, which is very intuitive to understand.
+4. As the author admits, most serious problems at that time were due to lack of sufficient tools for resources management, and predicts the area would have major change in next few years, this insight should have instructive influence on development of the Internet at that time.
+
+
+Weakness:
+1. This paper is more narrative than reasoning, lacking graphs, charts, equations which would make it more like a technical writing and more convincing.
+2. The article mentions two advantages of fate-sharing over replications, where second advantage being ‘fate-sharing is much easier to engineer than replication’, and no more explanation is presented. I am more interested in why it’s easier to engineering ‘fate-sharing’ than replication in network system since the latter seems simple in a computer system.
+3. As regarding to the relationship between architecture and performance of the Internet the author admits that it is extremely challenging without providing any guidance.

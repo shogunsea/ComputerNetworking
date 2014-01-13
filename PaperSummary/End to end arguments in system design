@@ -1,0 +1,15 @@
+
+
+
+Summary:
+This paper addresses a design pattern widely used in network system which states that placing the logic or functionality at the application level is most often the best approach in system design. 
+
+Strength:
+1. The paper provides plenty of illustrations that this design principle is applied in various situations in network system, which is quite convicing.
+2. The paper analysis the details of this pattern in both functional and performance perspective which makes it convicing.
+3. The paper also mentions applications of this principle in other systems as well which gives the reader a more complete view of the topic.
+
+Weakness:
+1. This paper is more narrative than reasoning, lacking graphs or equations which would make it more like a technical writing and more convincing.
+2. The paper does not mention how should the FIFO message delivery be guranteed from application level.
+3. The paper lacks quantitave analysis or convicing data when it comes to the performance issue.

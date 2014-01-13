@@ -18,6 +18,6 @@ Strengths, or points I think convincing:
 
 
 Weakness:
-1. This paper is more narrative than reasoning, lacking graphs, charts, equations which would make it more like a technical writing and more convincing.
+1. This paper is more narrative than reasoning, lacking graphs or equations which would make it more like a technical writing and more convincing.
 2. The article mentions two advantages of fate-sharing over replications, where second advantage being ‘fate-sharing is much easier to engineer than replication’, and no more explanation is presented. I am more interested in why it’s easier to engineering ‘fate-sharing’ than replication in network system since the latter seems simple in a computer system.
 3. As regarding to the relationship between architecture and performance of the Internet the author admits that it is extremely challenging without providing any guidance.

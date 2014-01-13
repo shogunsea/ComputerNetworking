@@ -1,15 +1,19 @@
-// Requirements:
-// 1) a summary of the paper in three senteneces or less, and
-// 2) the strengths (at least 3) and weaknesses (at least 3) of the paper 
-// 	before Monday at 9am. You are also encouraged to ask questions
-// 	 about the paper and respond to other students' questions.
 
-// Strengths are what the paper did well, including points that you thought
-// were convincing and/or results that are impressive. Weaknesses are the
-//  opposite: points you disagree with and/or results that are unconvincing.
+Requirements: 
+1) a summary of the paper in three senteneces or less, and 2) the strengths (at least 3) and weaknesses (at least 3) of the paper before Monday at 9am. You are also encouraged to ask questions about the paper and respond to other students' questions.
 
-
+Requirements Explanation:
+Strengths are what the paper did well, including points that you thought were convincing and/or results that are impressive. Weaknesses are the opposite: points you disagree with and/or results that are unconvincing.
 
 Summary: 
-This paper talks about the historical process of how TCP/IP protocol, internet was developed over the years. The author clarifies the motivation of early stage structure of the internet protocols, analyze the functionality and features we need from a network that merging existing networks, then discuss how researchers solve all those needs by design the various aspects in architecture&implementation over years.
+This paper talks about the historical process of how TCP/IP protocol, internet was developed over the years. The author clarifies the motivation of early stage structure of the internet protocols, analyze the functionality and features we need from a network that merging existing networks, then discuss how researchers solve all those needs by design the various aspects in architecture and implementation over years.
  
+Strengths:
+1. Fundamental goal and three aspects.
+2. Second level goal discussion.
+3. What you have learned form Survivability part.
+4.~types of services part.
+5 ~varieties of networks
+6.data grams
+7. tcp
+..

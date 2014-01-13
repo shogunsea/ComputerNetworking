@@ -6,6 +6,9 @@ Requirements Explanation:
 Strengths are what the paper did well, including points that you thought were convincing and/or results that are impressive. Weaknesses are the opposite: points you disagree with and/or results that are unconvincing.
 
 Summary: 
+This paper reviews the architecture and design philosophy of Internet protocol from a historical perspective, discusses main features and functionalities we expect from the Internet,  difficulties met in implementation of the architecture in various aspects and how they are solved.
+
+objectives of Internet protocol and how it was designed and improved
 This paper talks about the historical process of how TCP/IP protocol, internet was developed over the years. The author clarifies the motivation of early stage structure of the internet protocols, analyze the functionality and features we need from a network that merging existing networks, then discuss how researchers solve all those needs by design the various aspects in architecture and implementation over years.
  
 Strengths:

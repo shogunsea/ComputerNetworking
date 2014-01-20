@@ -291,7 +291,7 @@ int main(int parameterCount, char *parameters[]){
     if (connect(socketFileDescriptor,(struct sockaddr *) &server_addr,sizeof(server_addr)) < 0){
         errorHandler("ERROR connecting");
     }
- 
+  
     if(ssl_flag == 1){
         SSLConnection(socketFileDescriptor, info);
     }

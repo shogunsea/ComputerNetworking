@@ -5,4 +5,4 @@ all: clean $(binaries)
 client: client.c
 	$(CC) client.c -o client -Wall -g -lssl
 clean:
-	rm -f *.o client
+	rm -f *.o *.out client

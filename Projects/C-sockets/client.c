@@ -46,8 +46,6 @@ int parametersValidation(int parametersCount, char *parameters[]){
     // }
     return result;
 }
-
-
 // function to parse mathematical string and evaluate the expression.
 int calculator(char *buffer){
     // printf("buffer is: %s\n", buffer );

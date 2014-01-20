@@ -1,14 +1,13 @@
 
 # C socket programming project
-Team member: Xiaokang Xin, Xiaowen Guo.
 
-Font Awesome to PNG
-===================
+The program is buit for socket basics course project(http://david.choffnes.com/classes/cs4700sp14/project1.php).
+### 
 
 [Font Awesome] (http://fortawesome.github.com/Font-Awesome/) icons as PNG images
 of specified size.
 
-### Usage
+
 
     font-awesome-to-png.py [-h] [--color COLOR] [--filename FILENAME]
                            [--font FONT] [--list] [--size SIZE]

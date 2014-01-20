@@ -1,7 +1,7 @@
 
 # C socket programming project
 
-The program is buit for socket basics course project(http://david.choffnes.com/classes/cs4700sp14/project1.php).
+The program is buit for [socket basics course project](http://david.choffnes.com/classes/cs4700sp14/project1.php).
 ### 
 
 [Font Awesome] (http://fortawesome.github.com/Font-Awesome/) icons as PNG images

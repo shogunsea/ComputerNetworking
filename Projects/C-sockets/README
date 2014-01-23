@@ -1,9 +1,6 @@
 Our program is writen in c, it meets the project requirements and supports SSL connection.
-
 Here is how it works:
 1.First it will check input parameters by calling function 'parametersValidation', this function will ensure input parameters are in the exact form of: <-p port> <-s> [hostname] [NEU ID], any incorrect character like '-a 27993 -t cs5700.ccs.neu.edu 001104765' or wrong number of options like '-p 27994 -s cs5700.neu.edu 001104765 001104766' will be treated as wrong input and the program will terminate itself.
 2.After input parameters are validated, it will establish a connection with the corresponding server, and send the hello message.
 3.The program will parse the return string from server and calculate all the math expression by calling the function 'calculator', and send the result back to the server.
 4.Untill the message from the sever conatins 'BYE', the program will extract secret flag from the string and print it.
-
-The project folder contains compiled binary file 'client', you can also compile it by running 'make' command.

@@ -21,3 +21,20 @@ use socket to generate post request.{
 		}
 	}
 }
+
+
+
+
+before post:
+csrftoken=021a6e05d80a858e544e32ed8dfc2c23
+sessionid=e232c59f84e67802e7b2f4a7f06e407e
+
+
+post response:
+sessionid=64e3e672727c2205fa6ed488790b4a7b
+
+get request after logedin:
+csrftoken=021a6e05d80a858e544e32ed8dfc2c23; sessionid=64e3e672727c2205fa6ed488790b4a7b
+
+Conclusion:
+	After login, you only need to update sessionid, csrftoken remains the same.

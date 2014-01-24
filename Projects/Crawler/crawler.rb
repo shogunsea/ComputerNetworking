@@ -7,7 +7,9 @@ class Crawler
   attr_accessor :path
   attr_accessor :socket
   attr_accessor :query
-  attr_accessor :csrf
+  attr_accessor :login_query
+  attr_accessor :cookie
+  attr_accessor :login_session
   
   # @host = 'cs5700.ccs.neu.edu'     # The web server
   # @port = 80   
@@ -36,8 +38,9 @@ class Crawler
     @port = 80   
     @path = "/"
     @socket = TCPSocket.open(host,port)
-    @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
-    @query = "GET /accounts/login/?next=/fakebook HTTP/1.0\nFrom: shogunx@ccs.neu.edu\nConnection:keep-alive\nUser-Agent: HTTPTool/1.0\r\n\r\n"
+    # @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_KEEPALIVE, true)
+    @login_query = "GET /accounts/login/?next=/fakebook HTTP/1.0\nFrom: shogunx@ccs.neu.edu\nConnection:keep-alive\nUser-Agent: HTTPTool/1.0\r\n\r\n"
+    @query = "GET /fakebook HTTP/1.0\nFrom: shogunx@ccs.neu.edu\nConnection: keep-alive\nUser-Agent: HTTPTool/1.0\r\n\r\n"
   end
 
   def path=(new_path)
@@ -46,12 +49,17 @@ class Crawler
     nil
   end
   
+  def update_query(cookie)
+    @query = "GET /fakebook HTTP/1.0\nFrom: shogunx@ccs.neu.edu\nCookie: csrftoken=#{cookie[:csrf]}; sessionid=#{self.login_session}\nConnection: keep-alive\nUser-Agent: HTTPTool/1.0\r\n\r\n"
+  end
+  
   def get_cookie
-    response = self.get self.query
+    response = self.get self.login_query
+    # debugger
     csrf = response.scan(/csrftoken=\w*/).first.split("=")[1]
-    session_id = 0
+    session_id = response.scan(/sessionid=\w+/).first.split("=")[1]
     
-    cookie={:csrf=>csrf,:session_id:session_id}
+    @cookie={:csrf=>csrf,:session_id=>session_id}
   end
   
   def flush
@@ -64,16 +72,38 @@ class Crawler
     if username&&password
       input="username=#{username}&password=#{password}\r\n\r\n"
     else
-      input="csrfmiddlewaretoken=#{cookie.csrf}&username=001104765&password=ETLHFR62&next=%2Ffakebook%2F"
+      input="csrfmiddlewaretoken=#{cookie[:csrf]}&username=001104765&password=ETLHFR62&next=%2Ffakebook%2F"
     end
-    self.update_query input.length 
-    debugger
+    self.get_post_query input.length,cookie[:csrf],cookie[:session_id]
     
     login_query = Crawler.post_query+input
     #call post here
     p 'post request looks like:'
     puts login_query
-    self.get(login_query)
+    response = self.get(login_query)
+    if response
+      @login_session = response.scan(/sessionid=\w+/).first.split("=")[1] 
+      return @login_session
+    else
+      p 'response is nil, dont know why'
+    end
+    
+  end
+  
+  
+  def crawl
+    #success, can login and get 302 found response so far, and can get the session id after logedin.
+    self.login
+    #use sever returned session id to update the get query, no problem.
+    self.update_query(self.cookie)
+    
+    #try to get the index page, get 301 error right now.
+    self.get self.query
+    
+    
+    
+    
+    
   end
   
   #post method
@@ -88,7 +118,7 @@ class Crawler
     #split("\r\n")[0]  
   end 
   
-  def update_query(length,csrf,sessionid)
+  def get_post_query(length,csrf,sessionid)
     @@post_query = "POST /accounts/login/?next=/fakebook HTTP/1.0\nHost: cs5700.ccs.neu.edu\nFrom: shogunx@ccs.neu.edu\nReferer: http://cs5700.ccs.neu.edu/accounts/login/?next=/fakebook/\nUser-Agent: HTTPTool/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: #{length}\nCookie: csrftoken=#{csrf}; sessionid=#{sessionid}\r\n\r\n"
     # self.query = "GET #{path} HTTP/1.0\nFrom: someuser@jmarshall.com\nUser-Agent: HTTPTool/1.0\n"
   end

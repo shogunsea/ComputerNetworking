@@ -7,8 +7,6 @@ require 'thread'
 # ec5f21341c52fcb91fc84b2c9eda6c1670cd7fa9d203ec4b1255ab4346bff9f0
 # 777227fd95751358e447178ea11d0c588b9ef6d39a7e17a43679552b53068506
 
-
-
 class Crawler
   attr_accessor :port,:host,:path,:socket,:query,:login_query,:cookie,:login_session, :login_query
   
@@ -42,7 +40,8 @@ class Crawler
     if username&&password
       input="csrfmiddlewaretoken=#{cookie[:csrf]}&username=#{username}&password=#{password}&next=%2Ffakebook%2F"
     else
-      input="csrfmiddlewaretoken=#{cookie[:csrf]}&username=001104765&password=50UK7HD7&next=%2Ffakebook%2F"
+      #input="csrfmiddlewaretoken=#{cookie[:csrf]}&username=001104765&password=50UK7HD7&next=%2Ffakebook%2F"
+      input="csrfmiddlewaretoken=#{cookie[:csrf]}&username=001941553&password=SZ6192HB&next=%2Ffakebook%2F"
     end
     post_query = get_post_query(input.length,cookie[:csrf],cookie[:session_id])
     login_query = post_query+input

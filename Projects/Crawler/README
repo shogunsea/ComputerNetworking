@@ -1,0 +1,18 @@
+Web Crawler Project
+Team name: gntn
+Team member: Xiaokang Xin, Jiaxin Lv
+
+Our program is written in Ruby, it meets the project requirements, can find all five secret flags, handle HTTP status codes as asked.
+
+Here is the workflow of the program:
+1.First it will create an instance of Crawler class, which contains all the expected features and methods of a web crawler.
+2.Then it will send initial GET request and store the csrf token and session id returned by the server, as instance variable.
+3.Send POST request with username&password, along with the csrftoken and old session id, if succeed it will update the new session id.
+4.Use new session id and csrf token to start crawling from the login page.
+5.Call the method 'bfs' which is similar to a breadth-first search, whenever it parses a valid url under 'cs5700.ccs.neu.edu' domain, it will first check if the url has been visited, if not then it will add it to the queue as urls to be visited.
+6.During the crawling process if HTTP response contains 500 error it will retry until the request gets response with 200 OK code.
+7.If a secret flag is found it will be stored in an array.
+8.All secrets flag get printed.
+
+We use 'socket' library of Ruby for establishing connection with the server, 'thread' library for using Queue class(since Ruby version of ccis machine is 1.8.7, if it's 1.9+ then don't have to use this library).
+

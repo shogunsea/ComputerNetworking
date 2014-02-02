@@ -1,5 +1,5 @@
 require 'socket'
-require 'thread'
+require 'thread'#library for Queue.
 
 # 6cbc16569e9321908f6268692e567e8ebdb053aca633f0ded431c7860a2839b2
 # f03e6e05c72b77f56bbf5d6df286e0776392bf7dd45b7331d800690a8f41d2b8
@@ -49,19 +49,22 @@ class Crawler
     @login_session = response.scan(/sessionid=\w+/).first.split("=")[1] 
   end   
   
-  def crawl
-    t1 = Time.new
+
+  #method that logins to the fakebook and do all the crawling.
+  def go(username=nil, password=nil)
+    # t1 = Time.new
     #success, can login and get 302 found response so far, and can get the session id after logedin.
-    new_session_id = login 
+    new_session_id = login(username, password)
     #get index page with new session id
     update_session(cookie)
     
     secreat_flags = bfs("/fakebook/")
     
-    t2 = Time.new
-    puts "Total time: #{t2-t1} secs."
+    # t2 = Time.new
+
+    # puts "Total time: #{t2-t1} secs."
     
-    puts secreat_flags
+    # puts secreat_flags
     
   end
   
@@ -74,7 +77,7 @@ class Crawler
     secreat_flags = []
     count = 1
     # five_err = 0
-    re_try = 0
+    # re_try = 0
     # p 'into while loop'
     while !queue.empty?
       current_path = queue.pop
@@ -84,8 +87,8 @@ class Crawler
       current_response = get(new_query)
       
       until current_response[0..15].scan(/HTTP\/1.1 500/).empty?
-        re_try = re_try + 1
-        puts "retrying at #{re_try} times"
+        # re_try = re_try + 1
+        # puts "retrying at #{re_try} times"
         current_response = get(new_query)
       end
       
@@ -121,8 +124,8 @@ class Crawler
       end
     end
     # puts "total 500 error: #{five_err}"
-    puts "total 500 error retry: #{re_try}"
-    puts "total #{count} urls"
+    # puts "total 500 error retry: #{re_try}"
+    # puts "total #{count} urls"
     return secreat_flags
   end
   
@@ -136,11 +139,12 @@ class Crawler
   def get(request=nil)
     @socket = TCPSocket.open(host,port) 
     @socket.write request
-    response= @socket.recv(1000000)#read method take soooooo long.
+    response= @socket.recv(1000000)#@socket.read method take soooooo long. use .recv() instead.
     ########## if use socket.recv(10000000), it takes 8~9 secs to count 600 urls
   end 
   
   def get_post_query(length,csrf,sessionid)
+    #do not split the string.
     @login_query = "POST /accounts/login/?next=/fakebook HTTP/1.0\nHost: cs5700.ccs.neu.edu\nFrom: shogunx@ccs.neu.edu\nReferer: http://cs5700.ccs.neu.edu/accounts/login/?next=/fakebook/\nUser-Agent: HTTPTool/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: #{length}\nCookie: csrftoken=#{csrf}; sessionid=#{sessionid}\r\n\r\n"
     # query = "GET #{path} HTTP/1.0\nFrom: someuser@jmarshall.com\nUser-Agent: HTTPTool/1.0\n"
   end

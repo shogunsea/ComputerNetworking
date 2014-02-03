@@ -1,3 +1,8 @@
+#Web crawler.
+#Xiaokang Xin
+#Jan 26 2014
+#NEU Boston.
+
 require 'socket'
 require 'thread'#library for Queue.
 

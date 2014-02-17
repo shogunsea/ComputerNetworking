@@ -9,7 +9,7 @@ class Parser
 	end
 
 	def read(path)
-		record = {}
+		records = []
 		File.open(path, "r"){ |f|
 			count = 0
 			f.each_line do |l|
@@ -17,23 +17,51 @@ class Parser
 				if record[:fnode].to_f==1 && record[:tnode] && record[:event]=="+"
 					@numpkt = @numpkt +1
 				end
-
 				if record[:fid]==2 && record[:event] =="d"
 					@pktdrops = @pktdrops + 1
 				end
-				# debugger
-				# puts l
-				# count = count+1
-				# if count == 20
-				# 	break
-				# end
+				records<< record
 			end
 		}
-		record
+		records
 	end
 
 	def loss
 		pktdrops.to_f / numpkt.to_f 
+	end
+
+	def delay(records)
+		max_pkt_id = 0
+		start_time = {}
+		end_time = {}
+		records.each do |r|
+			max_pkt_id = r[:pktid].to_i if r[:pktid].to_i > max_pkt_id
+			start_time["#{r[:pktid]}"] ||= r[:time].to_f
+			if r[:event]!="d" && r[:fid].to_i==2
+				if r[:event]=="r"
+					end_time["#{r[:pktid]}"] = r[:time].to_f 
+				else
+					end_time["#{r[:pktid]}"] = -1
+				end
+			end
+		end
+		delay = {}
+		end_time.values.sort.each do |e|
+			unless e==-1
+				packet =0
+				end_time.each do |pktid, time|
+					packet = pktid if time==e
+				end
+				d =  end_time["#{packet}"] - start_time["#{packet}"]
+				delay["#{e}"] = d>0? d: 0
+			end
+		end
+		# for i in 0..max_pkt_id
+		# 	d =  end_time["#{i}"].to_f - start_time["#{i}"].to_f
+		# 	delay["#{i}"] = d>0? d: 0
+		# end
+		puts max_pkt_id
+		{:start_time => start_time, :end_time => end_time, :delay => delay}
 	end
 	
 	# item index in the record filed:

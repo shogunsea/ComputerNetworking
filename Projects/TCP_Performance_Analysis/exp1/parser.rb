@@ -57,6 +57,9 @@ class Parser
 		loss
 	end
 		
+
+
+
 	#tcp has fid=1
 	#tcp flow from n1 to n4
 	def throughput(records)

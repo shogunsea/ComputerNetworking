@@ -35,7 +35,7 @@ Use 'flowid=1' or 'packet_type=tcp' both have same result for tcp flow.
 
 11.[Done] Conduct experiments for exp1, vary cbr from 1 to 9, total 9*4=36 experiments, 36*2 = 72 trace files(one for output, one for cwnd), rearrange all the output files, move into Tahoe/Reno/Newreno/Vegas folder respectively.
 
-12.Experiment 1 one command summary:{
+12.Experiment one command summary:{
 	1.Integrated throughput overtime(as in bash script 'throughput_overtime_steady_state':{
 		# echo "Calculating throughput over time when cbr=1mb..."
 		# ruby parse.rb throughputovertime './Tahoe/output_Tahoe1mb.tr'
@@ -50,13 +50,14 @@ Use 'flowid=1' or 'packet_type=tcp' both have same result for tcp flow.
 		ruby parse.rb allthroughput './Tahoe/output_Tahoe1mb.tr'
 		./plot_multifiles "CBR(Mbps)" "Throughput(Mbps)" "Integrated_throughput_cbr.gif" "./Tahoe/all_throughput_Tahoe.tr" "./Reno/all_throughput_Reno.tr" "./Newreno/all_throughput_Newreno.tr" "./Vegas/all_throughput_Vegas.tr"
 	}output{
-		
+		1.File named like 'all_throughput_Tahoe.tr' under each variant folder.
+		2.File named like "Integrated_throughput_cbr.gif" under current folder.
 	}
 	3.RTT, for each variant, calculate 9 cbr values:{
 		ruby parse.rb allrtt './Tahoe/output_Tahoe1mb.tr'
 		./plot_multifiles "CBR(Mbps)" "RTT(ms)" "Integrated_rtt_cbr.gif" "./Tahoe/all_rtt_Tahoe.tr" "./Reno/all_rtt_Reno.tr" "./Newreno/all_rtt_Newreno.tr" "./Vegas/all_rtt_Vegas.tr"
 	}output{
-		1.File named like 'all_rtt_Tahoe' under each variant folder.
+		1.File named like 'all_rtt_Tahoe.tr' under each variant folder.
 		2.File named like "Integrated_rtt_cbr.gif" under current folder.
 	}
 	3.droprate, for each variant, calculate 9 cbr values:{
@@ -74,6 +75,44 @@ Use 'flowid=1' or 'packet_type=tcp' both have same result for tcp flow.
 	and cbr values vary from 0.5 to 10.5, approximately saves me 4*20 = 80 lines of code.
 
 16. Experiment 2 command summary:{
-	1.
+	1.Generate ns2 script, and trace file:{
+		ruby exp2_ruby_command_generator.rb 0.5 10.5 rr
+		./exp2_ns_script
+	}output:{
+		1. 'exp2_ns_script' under current folder.
+		2. Trace files of Reno/Reno when cbr vary from 0.5 to 10.5, under current folder. 
+	}
+	2.Calculate throughput, rtt, droprate, for Reno/Reno comparison when cbr vary from 0.5 to 10.5 mb.{
+		ruby parse.rb allthroughput './RenoReno/output_rr0.5mb.tr'
+		ruby parse.rb alldroprate './RenoReno/output_rr0.5mb.tr'
+		ruby parse.rb allrtt './RenoReno/output_rr0.5mb.tr'
+	}output:{
+		1.'all_throughput_rr.tr' under each variant folder.
+		2.'all_droprate_rr.tr' under each variant folder.
+		3.'all_rtt_rr.tr' under each variant folder.
+	}****What is different from exp1*****: parser output single tracefile, contains there
+	columns, in exp1 that is two. First one is cbr vlaue, second is for tcp1, 
+	third column is for tcp2, then you should modify plot script, to plot two lines
+	using single file.
+	3.Plot throughput, rtt, droprate for Reno/Reno comparison, using plot_singlefile_multilines script:{
+		./plot_singlefile_multilines "CBR(Mbps)" "Throughput(Mbps)" "rr_comparison_throughput.gif" "./RenoReno/all_throughput_rr.tr" "Reno1" "Reno2"
+		./plot_singlefile_multilines "CBR(Mbps)" "RTT(ms)" "rr_comparison_rtt.gif" "./RenoReno/all_rtt_rr.tr" "Reno1" "Reno2"
+		./plot_singlefile_multilines "CBR(Mbps)" "DropRate(%)" "rr_comparison_droprate.gif" "./RenoReno/all_droprate_rr.tr" "Reno1" "Reno2"
+	}
+	4.Generate tracefile for outer groups of comparison:{
+		ruby exp2_ruby_command_generator.rb 0.5 10.5 nr
+		./exp2_ns_script
+		ruby exp2_ruby_command_generator.rb 0.5 10.5 vv
+		./exp2_ns_script
+		ruby exp2_ruby_command_generator.rb 0.5 10.5 nv
+		./exp2_ns_script
+	}
+	4.Repeat step 2-3 for NewReno/Reno, Vegas/Vegas, Newreno/Vegas:{
+		1.NewReno/Reno:{
+			ruby parse.rb allthroughput './RenoReno/output_rr0.5mb.tr'
+			ruby parse.rb alldroprate './RenoReno/output_rr0.5mb.tr'
+			ruby parse.rb allrtt './RenoReno/output_rr0.5mb.tr'
+		}
+	}
 }
 

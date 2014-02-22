@@ -35,7 +35,7 @@ Use 'flowid=1' or 'packet_type=tcp' both have same result for tcp flow.
 
 11.[Done] Conduct experiments for exp1, vary cbr from 1 to 9, total 9*4=36 experiments, 36*2 = 72 trace files(one for output, one for cwnd), rearrange all the output files, move into Tahoe/Reno/Newreno/Vegas folder respectively.
 
-12.Experiment one command summary:{
+12.Experiment 1 one command summary:{
 	1.Integrated throughput overtime(as in bash script 'throughput_overtime_steady_state':{
 		# echo "Calculating throughput over time when cbr=1mb..."
 		# ruby parse.rb throughputovertime './Tahoe/output_Tahoe1mb.tr'
@@ -61,9 +61,19 @@ Use 'flowid=1' or 'packet_type=tcp' both have same result for tcp flow.
 	}
 	3.droprate, for each variant, calculate 9 cbr values:{
 		ruby parse.rb alldroprate './Tahoe/output_Tahoe1mb.tr'
+		./plot_multifiles "CBR(Mbps)" "DropRate(%)" "Integrated_droprate_cbr.gif" "./Tahoe/all_droprate_Tahoe.tr" "./Reno/all_droprate_Reno.tr" "./Newreno/all_droprate_Newreno.tr" "./Vegas/all_droprate_Vegas.tr"
 	}
 }
 
 
 13.[Done] Updated gnuplot style, using linespoints, key/legent out side of graph.
+
+14.[Results] Drops occurs only at node3(id=2)
+
+15. [Done]wrote a ruby script to generate experiment 2 commands, combining 4 types of comparisons
+	and cbr values vary from 0.5 to 10.5, approximately saves me 4*20 = 80 lines of code.
+
+16. Experiment 2 command summary:{
+	1.
+}
 

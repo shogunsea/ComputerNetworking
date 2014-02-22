@@ -4,7 +4,7 @@
 2. Update throughput/loss/delay method for 1.8.7, test outputs to be correct.
 
 3. [Done]Close cbr flow, only start tcp flow, see how much average throughput of tcp is smaller than the link bottleneck capacity.
-[Result]:Throughput curve is similar to ones when cbr present but not yet congested, when divied by 1million, the y axis should be Mbps, turns out the stable value is around 0.4mb, with the bandwidth to be 10mb.
+[Result]:Throughput curve is similar to ones when cbr present but not yet congested, when divied by 1million, the y axis should be Mbps, turns out teh stable value is around 0.4mb, with the bandwidth to be 10mb.
 
 4. [Done]Do not set tcp window size, conduct No.3. So single tcp flow experiments have two groups of results, first one is when tcp window size set to 24(though not quite sure about the unit to be byte or bit, I guess it should be byte), second one is using default size(not explicitly set it).
 [Result]: The default tcp window size is 20, turns out to be the packet amount! (In next exp I should set a very small value to test cwnd change.) The output of two groups are almost identical, with minor change in yaxis value.
@@ -34,4 +34,36 @@ Use 'flowid=1' or 'packet_type=tcp' both have same result for tcp flow.
 
 
 11.[Done] Conduct experiments for exp1, vary cbr from 1 to 9, total 9*4=36 experiments, 36*2 = 72 trace files(one for output, one for cwnd), rearrange all the output files, move into Tahoe/Reno/Newreno/Vegas folder respectively.
+
+12.Experiment one command summary:{
+	1.Integrated throughput overtime(as in bash script 'throughput_overtime_steady_state':{
+		# echo "Calculating throughput over time when cbr=1mb..."
+		# ruby parse.rb throughputovertime './Tahoe/output_Tahoe1mb.tr'
+		...
+		# echo "Plotting integrated throughput over time when cbr=1mb..."
+		# ./plot_multifiles "Time(s)" "Throughput(Mbs)" "IntegratedThroughput_CBR1mb.gif" './Tahoe/throughputovertime_Tahoe1mb.tr' './Reno/throughputovertime_Reno1mb.tr' './Newreno/throughputovertime_Newreno1mb.tr' './Vegas/throughputovertime_Vegas1mb.tr'
+	}output{
+		1.Will generate file like 'throughputovertime_Tahoe1mb.tr' under each variant's folder.'
+		2.Will generate graphs named like "IntegratedThroughput_CBR1mb.gif" under current folder.
+	}
+	2.Throughput, for each variant, calculate 9 cbr values:{
+		ruby parse.rb allthroughput './Tahoe/output_Tahoe1mb.tr'
+		./plot_multifiles "CBR(Mbps)" "Throughput(Mbps)" "Integrated_throughput_cbr.gif" "./Tahoe/all_throughput_Tahoe.tr" "./Reno/all_throughput_Reno.tr" "./Newreno/all_throughput_Newreno.tr" "./Vegas/all_throughput_Vegas.tr"
+	}output{
+		
+	}
+	3.RTT, for each variant, calculate 9 cbr values:{
+		ruby parse.rb allrtt './Tahoe/output_Tahoe1mb.tr'
+		./plot_multifiles "CBR(Mbps)" "RTT(ms)" "Integrated_rtt_cbr.gif" "./Tahoe/all_rtt_Tahoe.tr" "./Reno/all_rtt_Reno.tr" "./Newreno/all_rtt_Newreno.tr" "./Vegas/all_rtt_Vegas.tr"
+	}output{
+		1.File named like 'all_rtt_Tahoe' under each variant folder.
+		2.File named like "Integrated_rtt_cbr.gif" under current folder.
+	}
+	3.droprate, for each variant, calculate 9 cbr values:{
+		ruby parse.rb alldroprate './Tahoe/output_Tahoe1mb.tr'
+	}
+}
+
+
+13.[Done] Updated gnuplot style, using linespoints, key/legent out side of graph.
 

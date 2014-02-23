@@ -109,9 +109,32 @@ Use 'flowid=1' or 'packet_type=tcp' both have same result for tcp flow.
 	}
 	4.Repeat step 2-3 for NewReno/Reno, Vegas/Vegas, Newreno/Vegas:{
 		1.NewReno/Reno:{
-			ruby parse.rb allthroughput './RenoReno/output_rr0.5mb.tr'
-			ruby parse.rb alldroprate './RenoReno/output_rr0.5mb.tr'
-			ruby parse.rb allrtt './RenoReno/output_rr0.5mb.tr'
+			ruby parse.rb allthroughput './NewrenoReno/output_nr0.5mb.tr'
+			ruby parse.rb alldroprate './NewrenoReno/output_nr0.5mb.tr'
+			ruby parse.rb allrtt './NewrenoReno/output_nr0.5mb.tr'
+
+			./plot_singlefile_multilines "CBR(Mbps)" "Throughput(Mbps)" "nr_comparison_throughput.gif" "./NewrenoReno/all_throughput_nr.tr" "Newreno" "Reno"
+			./plot_singlefile_multilines "CBR(Mbps)" "RTT(ms)" "nr_comparison_rtt.gif" "./NewrenoReno/all_rtt_nr.tr" "Newreno" "Reno"
+			./plot_singlefile_multilines "CBR(Mbps)" "DropRate(%)" "nr_comparison_droprate.gif" "./NewrenoReno/all_droprate_nr.tr" "Newreno" "Reno"
+		}
+		2.Vegas/Vegas:{
+			ruby parse.rb allthroughput './VegasVegas/output_vv0.5mb.tr'
+			ruby parse.rb alldroprate './VegasVegas/output_vv0.5mb.tr'
+			ruby parse.rb allrtt './VegasVegas/output_vv0.5mb.tr'
+
+			./plot_singlefile_multilines "CBR(Mbps)" "Throughput(Mbps)" "vv_comparison_throughput.gif" "./VegasVegas/all_throughput_vv.tr" "Vegas1" "Vegas2"
+			./plot_singlefile_multilines "CBR(Mbps)" "RTT(ms)" "vv_comparison_rtt.gif" "./VegasVegas/all_rtt_vv.tr" "Vegas1" "Vegas2"
+			./plot_singlefile_multilines "CBR(Mbps)" "DropRate(%)" "vv_comparison_droprate.gif" "./VegasVegas/all_droprate_vv.tr" "Vegas1" "Vegas2"
+		}
+		3.Newreno/Vegas:{
+			ruby parse.rb allthroughput './NewrenoVegas/output_nv0.5mb.tr'
+			ruby parse.rb alldroprate './NewrenoVegas/output_nv0.5mb.tr'
+			ruby parse.rb allrtt './NewrenoVegas/output_nv0.5mb.tr'
+
+			./plot_singlefile_multilines "CBR(Mbps)" "Throughput(Mbps)" "nv_comparison_throughput.gif" "./NewrenoVegas/all_throughput_nv.tr" "Newreno" "Vegas"
+			./plot_singlefile_multilines "CBR(Mbps)" "RTT(ms)" "nv_comparison_rtt.gif" "./NewrenoVegas/all_rtt_nv.tr" "Newreno" "Vegas"
+			./plot_singlefile_multilines "CBR(Mbps)" "DropRate(%)" "nv_comparison_droprate.gif" "./NewrenoVegas/all_droprate_nv.tr" "Newreno" "Vegas"
+		
 		}
 	}
 }

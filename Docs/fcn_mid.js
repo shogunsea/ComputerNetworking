@@ -94,7 +94,8 @@
 			also determines where is the error and then correct it.
 		}
 		3.Media Access Control:{
-			MAC protocal are the rules on how to share the medium, also provide strategies for detecting, avoiding and recovering from collisions.
+			MAC protocal are the rules on how to share the medium, also provide strategies for detecting, 
+			avoiding and recovering from collisions.
 			Example:{
 				Time Division Multi-Access(TDMA) cellular.
 				Frequency Division Multi-Access(FDMA) cellular.
@@ -103,19 +104,27 @@
 	}
 	2.Advantages and limitations of bridged/switched newtorks:{
 		1.Bridge:{
-			Bridges have memoery buffer to queue packets, intelligent so that only foward packets to the correct output, and high performance
+			Bridges have memoery buffer to queue packets, intelligent so that only foward packets to the correct 
+			output, and high performance
 			Goals of bridge and swith: reduce the collision domain.
 			Function:{
 				forwarding of frames, learning of addresses, spanning tree algorithm to handle loops.
 			}
+			Pros:{
+				1.limits collision domains.
+				2. Improve scalability.
+			}
+			Cons: More complex than hubs.
 		}
 		2.Switch:{
-
+			Special case of bridge, each port is connected to a single host,
+			links are full duplex, no need for collision detection.
 		}
 		3.Hub:{
 			Hubs and repeaters are layer-1 devices, physical only.
+			Pros: Hardware are cheap and fast
+			Cons: No scalability.
 		}
-
 	}
 }
 
@@ -128,10 +137,18 @@
 		mistakes in transmitting.
 	}
 	2.Differences between class and prefix based addressing, Advantages of CIDR:{
-		Class address: divides the address space for IPv4 into five address classes, prefix based addressing
-		organized IP address into sub-networks independent of the value of the address themselves.
-		Advantages of CIDR: it can be used to effectively manage the available IP address space. Also 
-		can reduce the number of routing table entries.
+		Class address: divides the address space for IPv4 into five address classes, 
+		prefix based addressing organized IP address into sub-networks independent of 
+		the value of the address themselves.
+		Advantages of CIDR: it can be used to effectively manage 
+		the available IP address space. Also can reduce the number of routing table 
+		entries.
+		prefix based or hierachical addressing is critical for scalability;
+		CIDR improves scalability and granularity.		
+		}Cons:{
+		classes are still too coarse;
+		routing tables are still too big.
+	}
 	}
 	3.IP fragmentation algorithm:{
 		Break large packets into smaller pieces and re-assembled at destination so that the original
@@ -143,27 +160,6 @@
 		Fragmentation:[Done by sender and forwarding router, Done only be the sender.]
 		Packet flow:[No identification, available by flow label field in the header]
 		Configuration:[Manualy, auto configuration available]
-	}
-}
-
-5. Routing:{
-	1.Distance vector and link state, benifits and drawbacks of each other:{
-		Distance vector:
-	}
-	2.High level goals of BGP, how paths selected, stable paths problem.{
-		1.{
-			exchange routing and reachability information between autonomous system on the 
-			internet.
-		}
-		2.{
-			BGP router send and receive update message to indicate a change in the prefered path
-		}
-	}
-	3.Different types of BGP relationships, contrast iBGP and eBGP:{
-
-	}
-	4.How to determine a path is valid based on the valley-freee routing assumption:{
-
 	}
 }
 

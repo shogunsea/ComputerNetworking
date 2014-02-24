@@ -14,22 +14,73 @@
 }
 
 2.bandwidth/delay product:{
-
+	1.TCP performs poorly when:{
+		1.Bandwith is large.
+		2.delay(RTT) is large.
+		3.bandwidth*delay is large:{
+			this product indicates maximum amount of in-flight data in the network.
+		}
+	}
+	2.Why:{
+		1.Slow start and AIMD are slow to converge.
+		2.TCP is ack clocked, it will react only when ack received.
+	}
 }
 
-3.advantange and limitaions of bridged/switched network
+4.Three way handshake, sequence number, acks number work:{
+	1.client:{
+		syn<seqC, 0>
+	}
+	2.server:{
+		syn/ack<seqS, seqC+1>
+	}
+	3.client:{
+		ack<seqC+1, seqS+1>
+	}
+	each side notifies the other of starting seq number.
+	each side acks the other side's starting seq number.
+}
 
-4.Three way handshake, sequence number, acks number work.
-
-5.RTO on TCP vs Wireless:{
-
+5.RTO in wireless:{
+	RTO definition in TCP:{
+		RTO = 2*new_rtt
+	}
+	problem in wireless:{
+		Interference in wireless is very common, the assumtion that long RTO
+		indicates congestion is no longer true.
+	}
+	Solution:{
+		1.Use delay based congestion detection like Vegas.
+		2.explicit congestion notification.
+	}
 }
 
 6.TCP on high speed internet, problems of TCP:{
-
+	1.Bandwith*delay product is large.
+	2.Goals of real world TCP:{
+		1.Fast window growth.
+		2.Converge quickly.
+		3.Fairness between other protocols.
+	}
+	3.problems and solutions:{
+		1.throughput depends on RTT:{
+			Maintain a serperate delay window, one as delay window, one as 
+			congestion window.
+		}
+		2.Short flows:most tcp flows never leave slow start:{
+			1.increase initial cwnd to 10.
+			2.TCP fast open.
+		}
+		
+	}
 }
 
-7.Remy
+7.Remy:{
+	Remy is a computer program designed to generate effective congestion control
+	solution, the algorithm is based on ack sent time, ack received time and RTT
+	to decide Remy congestion control, but it does not take packet loss into
+	consideration.
+}
 
 8.TCP congestion control pseudo code:{
 	Start:
@@ -69,3 +120,8 @@
 		delay based congestion avoidance 
 	}
 }
+
+10.Why running out of IP addresses:{
+	IPv4: 32 bits, 2^32 possible addresses which is too small.
+}
+

@@ -1,7 +1,0 @@
-gnuplot
-set title 't1'
-set xlabel 'time'
-set ylabel 'd'
-set terminal png
-set output 'delayxx.gif'
-plot 'delay_final.txt' using 1:2 with lines 1, 'delay_final.txt' using 1:3 with lines 2

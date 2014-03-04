@@ -1,8 +1,0 @@
-gnuplot<<_EOF_
-	set title 'cwnd'
-	set xlabel 'time'
-	set ylabel 'cwnd'
-	set terminal png
-	set output "$2"
-	plot "$1" notitle with lines
-	exit

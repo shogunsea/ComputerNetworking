@@ -35,7 +35,7 @@ def checkSum(msg):
 	return s
 
 # Get available port
-def getFreePort():
+def get_port():
 	sPort = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sPort.bind(("",0))
 	sPort.listen(1)
@@ -43,7 +43,7 @@ def getFreePort():
 	sPort.close()
 	return port
 
-def getLocalIP(host):
+def gen_local_ip(host):
   ipAddress = ''
   try:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -55,7 +55,7 @@ def getLocalIP(host):
   return ipAddress 
 
 # Generate IP header and add it to the packet
-def generateIPPacket(msg, sourceIP, destIP):
+def generate_ip_packet(msg, sourceIP, destIP):
 	# IP header fields
 	# print "Generating IP packet..."
 	ip_version = 4 # Version ipv4
@@ -77,10 +77,11 @@ def generateIPPacket(msg, sourceIP, destIP):
 	# Assemble ip packet
 	ip_header = pack('!BBHHHBBH4s4s' , ip_ver_ihl, ip_typeOfService, ip_totalLength, ip_id, ip_fragOffset, ip_ttl, ip_protocol, ip_checksum, ip_source, ip_dest)
 	packet = ip_header + msg
+	# return generate
 	return packet
 
 # Generate the packet with TCP and IP header
-def generateTCPPacket(msg, sourceIP, destIP, flag, seqNum, ackNum):
+def generate_tcp_packet(msg, sourceIP, destIP, flag, seqNum, ackNum):
     # print "Generating TCP packet..."
     # TCP header fields
     tcp_sourcePort = SOURCE_PORT #Get the port generated
@@ -130,22 +131,18 @@ def generateTCPPacket(msg, sourceIP, destIP, flag, seqNum, ackNum):
     packet = tcp_header + msg
 	
 	# Add IP header and return
-    return generateIPPacket(packet, sourceIP, destIP)
+    return generate_ip_packet(packet, sourceIP, destIP)
 
-def decode_ethernet_header(packet):
+def validate_ethernet_header(packet, local_mac, remote_mac):
     #parse ethernet header
     eth_length = 14
     eth_header = packet[:eth_length]
     eth = unpack('!6s6sH' , eth_header)
     eth_protocol = socket.ntohs(eth[2])
     print 'Destination MAC : ' + eth_addr(packet[0:6]) + ' Source MAC : ' + eth_addr(packet[6:12]) + ' Protocol : ' + str(eth_protocol)
- 
-
-
-
 
 # Decode IP header and store in a map
-def decodeIPHeader(packet):
+def decode_ip_packet(packet):
     ip_header = packet[0:20]
     #now unpack them :)
     iph = unpack('!BBHHHBBH4s4s' , ip_header)
@@ -158,76 +155,53 @@ def decodeIPHeader(packet):
     s_addr = socket.inet_ntoa(iph[8]);
     d_addr = socket.inet_ntoa(iph[9]);
 
-    mapHeader = {}
-    mapHeader["version"] = version
-    mapHeader["headerLen"] = ihl
-    mapHeader["totalLen"] = iph_length
-    mapHeader["ttl"] = ttl
-    mapHeader["protocol"] = protocol
-    mapHeader["sourceIP"] = s_addr
-    mapHeader["destIP"] = d_addr
-    return mapHeader
+    packet_dict = {}
+    packet_dict["version"] = version
+    packet_dict["headerLen"] = ihl
+    packet_dict["totalLen"] = iph_length
+    packet_dict["ttl"] = ttl
+    packet_dict["protocol"] = protocol
+    packet_dict["sourceIP"] = s_addr
+    packet_dict["destIP"] = d_addr
+    return packet_dict
 
-# Decode TCP header and store in a map
-def decodeTCPHeader2(packet):
-    tcp_header = packet[0:20]
-    #now unpack them :)
-    tcph = unpack('!HHLLBBHHH' , tcp_header)
-    source_port = tcph[0]
-    dest_port = tcph[1]
-    sequence = tcph[2]
-    acknowledgement = tcph[3]
-    doff_reserved = tcph[4]#96
-    tcph_length = doff_reserved >> 4
-    h_size = 20 + tcph_length * 4
-    data_size = len(packet) - h_size
-    data = packet[h_size:]
-    mapHeader = {}
-    mapHeader["sourcePort"] = source_port
-    mapHeader["destPort"] = dest_port
-    mapHeader["seqNum"] = sequence
-    mapHeader["ackNum"] = acknowledgement
-    mapHeader["doff_reserved"] = doff_reserved
-    mapHeader["tcph_length"] = tcph_length
-    mapHeader["h_size"] = h_size
-    mapHeader["data_size"] = data_size
-    mapHeader["data"] = data
-    return mapHeader
-
-def decodeTCPHeader(packet_long):
+def decode_tcp_packet(packet_long):
     packet = packet_long#[20:]
-    mapHeader = {}
-    mapHeader["sourcePort"] = (int(ord(packet[0])<<8))+(int(ord(packet[1])))
-    mapHeader["destPort"] = (int(ord(packet[2])<<8))+(int(ord(packet[3])))
-    mapHeader["seqNum"] =(int(ord(packet[4])<<24))+(int(ord(packet[5])<<16))+(int(ord(packet[6])<<8))+(int(ord(packet[7])))
-    mapHeader["ackNum"] = (int(ord(packet[8])<<24))+(int(ord(packet[9])<<16))+(int(ord(packet[10])<<8))+(int(ord(packet[11])))
-    mapHeader["dataOffSet"] = ((int(ord(packet[12])) & 0xF0)>>4)<<2
-    mapHeader["urg"] = int(ord(packet[13]) & 0x20)>>5
-    mapHeader["ack"] = int(ord(packet[13]) & 0x10)>>4
-    mapHeader["psh"] = int(ord(packet[13]) & 0x8)>>3
-    mapHeader["rst"] = int(ord(packet[13]) & 0x4)>>2
-    mapHeader["syn"] = int(ord(packet[13]) & 0x2)>>1
-    mapHeader["fin"] = int(ord(packet[13]) & 0x1)
-    mapHeader["window"] = int(ord(packet[14])<<8)+int(ord(packet[15]))
-    mapHeader["checksum"] = int(ord(packet[16])<<8)+int(ord(packet[17]))
-    mapHeader["urgPointer"] = int(ord(packet[18])<<8)+int(ord(packet[19]))
-    mapHeader["data"] = packet[mapHeader["dataOffSet"]:]
+    packet_dict = {}
+    packet_dict["sourcePort"] = (int(ord(packet[0])<<8))+(int(ord(packet[1])))
+    packet_dict["destPort"] = (int(ord(packet[2])<<8))+(int(ord(packet[3])))
+    packet_dict["seqNum"] =(int(ord(packet[4])<<24))+(int(ord(packet[5])<<16))+(int(ord(packet[6])<<8))+(int(ord(packet[7])))
+    packet_dict["ackNum"] = (int(ord(packet[8])<<24))+(int(ord(packet[9])<<16))+(int(ord(packet[10])<<8))+(int(ord(packet[11])))
+    packet_dict["dataOffSet"] = ((int(ord(packet[12])) & 0xF0)>>4)<<2
+    packet_dict["urg"] = int(ord(packet[13]) & 0x20)>>5
+    packet_dict["ack"] = int(ord(packet[13]) & 0x10)>>4
+    packet_dict["psh"] = int(ord(packet[13]) & 0x8)>>3
+    packet_dict["rst"] = int(ord(packet[13]) & 0x4)>>2
+    packet_dict["syn"] = int(ord(packet[13]) & 0x2)>>1
+    packet_dict["fin"] = int(ord(packet[13]) & 0x1)
+    packet_dict["window"] = int(ord(packet[14])<<8)+int(ord(packet[15]))
+    packet_dict["checksum"] = int(ord(packet[16])<<8)+int(ord(packet[17]))
+    packet_dict["urgPointer"] = int(ord(packet[18])<<8)+int(ord(packet[19]))
+    packet_dict["data"] = packet[packet_dict["dataOffSet"]:]
     # 
-    jj = decodeTCPHeader2(packet_long)
-    if mapHeader['seqNum']!= jj['seqNum']:
-    	print '!!!!!!!! seqNum not same.'
-    if mapHeader['ackNum']!=jj['ackNum']:
-    	print '!!!!!!!! ackNum not same.'
+    # jj = decode_tcp_packet2(packet_long)
+    # if packet_dict['seqNum']!= jj['seqNum']:
+    # 	print '!!!!!!!! seqNum not same.'
+    # if packet_dict['ackNum']!=jj['ackNum']:
+    # 	print '!!!!!!!! ackNum not same.'
     
-    return mapHeader
+    return packet_dict
     
 
 
 
 #Check IP Header
 def checkIPHeader(packet, mapIP, destIP):
+	if destIP != mapIP['sourceIP']:
+		print "Ip mismatch."
+		return false
 	if 6 != mapIP['protocol']:
-		print "ip proto"
+		print "Protocol type mismatch."
 		return false
 	return true
 
@@ -274,7 +248,7 @@ def timeOutRecv(recvsock, size):
 	if ready[0]:
 		response = recvsock.recvfrom(size)
 		# ethernet_frame = response[0]
-		# ethernet_dict = decode_ethernet_header(response[0])
+		# ethernet_dict = validateer(response[0])
 
 	else:
 		# handleError("Time out!")
@@ -309,7 +283,7 @@ def three_way_handshake(host):
 	sourceIP = socket.gethostbyname(socket.gethostname())#Get local IP
 	# If falsed by hosts file use another method
 	if sourceIP[0:3] == '127':
-		sourceIP = getLocalIP(host)
+		sourceIP = gen_local_ip(host)
 	destIP= socket.gethostbyname(host)
 	# Create two raw sockets, one for sending and one for receiving
 	try:
@@ -327,27 +301,27 @@ def three_way_handshake(host):
 	synMsg = ''
 	seqNum = 4321 # Starting seq number
 	ackNum = 0
-	packet = generateTCPPacket(synMsg, sourceIP, destIP, 'syn', seqNum, ackNum)
+	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'syn', seqNum, ackNum)
 	# First syn handshake
 	sendsock.sendto(packet, (destIP , 0 ))
 	response, addr =  nonBlockTransmit(packet, recvsock, 2048, sendsock)
-	mapIP = decodeIPHeader(response)
+	mapIP = decode_ip_packet(response)
 	headerIPlen = mapIP['headerLen']*4
-	mapTCP = decodeTCPHeader(response[headerIPlen:])#headerIPlen*4!?
-	# mapTCP = decodeTCPHeader(response)
+	mapTCP = decode_tcp_packet(response[headerIPlen:])#headerIPlen*4!?
+	# mapTCP = decode_tcp_packet(response)
 	#Validate packet
 	while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, 1, sendsock)==false:
 		response, addr =  nonBlockTransmit(packet, recvsock, 2048, sendsock)
-		mapIP = decodeIPHeader(response)
+		mapIP = decode_ip_packet(response)
 		headerIPlen = mapIP['headerLen']*4
 		# 
-		mapTCP = decodeTCPHeader(response[headerIPlen:])#headerIPlen*4!?
+		mapTCP = decode_tcp_packet(response[headerIPlen:])#headerIPlen*4!?
 
 	print "Connection established?????????"
 	if mapTCP.get('syn') == 1 and mapTCP.get('ack') == 1:
 		seqNum = mapTCP['ackNum']
 		ackNum = mapTCP['seqNum']+1
-		packet = generateTCPPacket(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+		packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
 		sendsock.sendto(packet, (destIP , 0 ))
 	#Handshake end, connection established
 	return [sendsock, recvsock, seqNum, ackNum]
@@ -355,12 +329,12 @@ def three_way_handshake(host):
 def connection_tear_down_by_server(sendsock, recvsock, seqNum, ackNum):
 	'''Receivd fin, tear down connection'''
 	synMsg = ''
-	packet = generateTCPPacket(synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
+	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
 	sendsock.sendto(packet, (destIP , 0 ))
 	response, addr = timeOutRecv(recvsock, 2048)
-	mapIP = decodeIPHeader(response)
+	mapIP = decode_ip_packet(response)
 	headerIPlen = mapIP['headerLen']
-	mapTCP = decodeTCPHeader(response[headerIPlen:])
+	mapTCP = decode_tcp_packet(response[headerIPlen:])
 	if mapTCP['ack'] == 1:
 		print "receive succceed:", len(receivedMsg)
 	# Close sockets
@@ -370,19 +344,19 @@ def connection_tear_down_by_server(sendsock, recvsock, seqNum, ackNum):
 
 def connection_tear_down_by_client(sendsock, recvsock, seqNum, ackNum):
 	synMsg = ''
-	packet = generateTCPPacket(synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
+	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
 	sendsock.sendto(packet, (destIP , 0 ))
 	response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-	mapIP = decodeIPHeader(response)
+	mapIP = decode_ip_packet(response)
 	headerIPlen = mapIP['headerLen']*4
-	mapTCP = decodeTCPHeader(response[headerIPlen:])
+	mapTCP = decode_tcp_packet(response[headerIPlen:])
 	# print 'mapTCP fin:' + str(mapTCP['fin'])
 	i = 0
 	while mapTCP['fin']!=1:
 		response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-		mapIP = decodeIPHeader(response)
+		mapIP = decode_ip_packet(response)
 		headerIPlen = mapIP['headerLen']*4
-		mapTCP = decodeTCPHeader(response[headerIPlen:])
+		mapTCP = decode_tcp_packet(response[headerIPlen:])
 		print 'mapTCP fin:' + str(mapTCP['fin'])
 		print mapTCP['fin']!=1
 		if i>30:#receive at most 30 promiscuous packets, then force to close down
@@ -390,7 +364,7 @@ def connection_tear_down_by_client(sendsock, recvsock, seqNum, ackNum):
 
 	seqNum = mapTCP['ackNum']
 	ackNum = mapTCP['seqNum']+1
-	packet = generateTCPPacket(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
 	sendsock.sendto(packet, (destIP , 0 ))
 	# Close sockets
 	sendsock.close()
@@ -413,25 +387,25 @@ def tcp_transmission(msg, host):
 	receivedMsg = ''
 	synMsg = ''
     # Assemble the message packet
-	packet = generateTCPPacket(msg, sourceIP, destIP, 'ack', seqNum, ackNum)
+	packet = generate_tcp_packet(msg, sourceIP, destIP, 'ack', seqNum, ackNum)
     # Send the packet 
 	sendsock.sendto(packet, (destIP , 0 ))
     # Receive with the time out control method
 	response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
     # Decode IP header
-	mapIP = decodeIPHeader(response)
+	mapIP = decode_ip_packet(response)
 	headerIPlen = mapIP['headerLen']*4
     # Decode TCP header
-	mapTCP = decodeTCPHeader(response[headerIPlen:])
+	mapTCP = decode_tcp_packet(response[headerIPlen:])
 	
     # Check the packet in various aspects
 	while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(msg), sendsock) == false:
 		response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
 	    # Decode IP header
-		mapIP = decodeIPHeader(response)
+		mapIP = decode_ip_packet(response)
 		headerIPlen = mapIP['headerLen']*4
 	    # Decode TCP header
-		mapTCP = decodeTCPHeader(response[headerIPlen:])
+		mapTCP = decode_tcp_packet(response[headerIPlen:])
     # Get the header total length
 	headerLength = mapTCP['dataOffSet']+headerIPlen
 	msg_dict = {}
@@ -451,22 +425,22 @@ def tcp_transmission(msg, host):
 		print 'msg len: ' + str(len(thisMsg))
         # Only ack to ones with data
 		if len(thisMsg) != 0:
-			packet = generateTCPPacket(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+			packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
 			sendsock.sendto(packet, (destIP , 0 ))
 		
 		# Repeat the receiving process
 		response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
 		
-		mapIP = decodeIPHeader(response)
+		mapIP = decode_ip_packet(response)
 		headerIPlen = mapIP['headerLen']*4
-		mapTCP = decodeTCPHeader(response[headerIPlen:])
+		mapTCP = decode_tcp_packet(response[headerIPlen:])
 		
 
 		while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(synMsg), sendsock)==false:
 			response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-			mapIP = decodeIPHeader(response)
+			mapIP = decode_ip_packet(response)
 			headerIPlen = mapIP['headerLen']*4
-			mapTCP = decodeTCPHeader(response[headerIPlen:])
+			mapTCP = decode_tcp_packet(response[headerIPlen:])
 
 		headerLength = mapTCP['dataOffSet']+headerIPlen
 
@@ -496,25 +470,25 @@ def ethernet_transmission(msg, host):
 	receivedMsg = ''
 	synMsg = ''
     # Assemble the message packet
-	packet = generateTCPPacket(msg, sourceIP, destIP, 'ack', seqNum, ackNum)
+	packet = generate_tcp_packet(msg, sourceIP, destIP, 'ack', seqNum, ackNum)
     # Send the packet 
 	sendsock.sendto(packet, (destIP , 0 ))
     # Receive with the time out control method
 	response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
     # Decode IP header
-	mapIP = decodeIPHeader(response)
+	mapIP = decode_ip_packet(response)
 	headerIPlen = mapIP['headerLen']*4
     # Decode TCP header
-	mapTCP = decodeTCPHeader(response[headerIPlen:])
+	mapTCP = decode_tcp_packet(response[headerIPlen:])
     # Check the packet in various aspects
 	while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(msg), sendsock) == false:
 		response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
 	    # Decode IP header
 		
-		mapIP = decodeIPHeader(response)
+		mapIP = decode_ip_packet(response)
 		headerIPlen = mapIP['headerLen']*4
 	    # Decode TCP header
-		mapTCP = decodeTCPHeader(response[headerIPlen:])
+		mapTCP = decode_tcp_packet(response[headerIPlen:])
     # Get the header total length
 	headerLength = mapTCP['dataOffSet']+headerIPlen
 	msg_dict = {}
@@ -533,20 +507,20 @@ def ethernet_transmission(msg, host):
 		print 'msg len: ' + str(len(thisMsg))
         # Only ack to ones with data
 		if len(thisMsg) != 0:
-			packet = generateTCPPacket(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+			packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
 			sendsock.sendto(packet, (destIP , 0 ))
 		
 		# Repeat the receiving process
 		response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
 		
-		mapIP = decodeIPHeader(response)
+		mapIP = decode_ip_packet(response)
 		headerIPlen = mapIP['headerLen']*4
-		mapTCP = decodeTCPHeader(response[headerIPlen:])
+		mapTCP = decode_tcp_packet(response[headerIPlen:])
 		while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(synMsg), sendsock)==false:
 			response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-			mapIP = decodeIPHeader(response)
+			mapIP = decode_ip_packet(response)
 			headerIPlen = mapIP['headerLen']*4
-			mapTCP = decodeTCPHeader(response[headerIPlen:])
+			mapTCP = decode_tcp_packet(response[headerIPlen:])
 
 
 		headerLength = mapTCP['dataOffSet']+headerIPlen
@@ -569,6 +543,8 @@ def get_mac_address(host):
 	print 'Tearing down connection...'
 	if connection_tear_down_by_client(sendsock,recvsock, seqNum, ackNum):
 		print 'Connection is disconnected.'
+	return [local_mac, remote_mac]
+
 
 # Handle error
 def handleError(msg):
@@ -668,7 +644,7 @@ def parse_result(file_name, content):
 	return file_content
 
 
-SOURCE_PORT = getFreePort()
+SOURCE_PORT = get_port()
 print "got source port:", SOURCE_PORT
 
 host = ''

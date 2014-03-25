@@ -10,6 +10,7 @@ from struct import *
 # sudo python rawhttpget.py http://david.choffnes.com/classes/cs4700sp14/2MB.log 
 # sudo python rawhttpget.py http://david.choffnes.com/classes/cs4700sp14/10MB.log
 # sudo python rawhttpget.py http://david.choffnes.com/classes/cs4700sp14/50MB.log
+# sudo python rawhttpget.py http://www.ccs.neu.edu
 
 PORT = 80
 sourceIP = ''
@@ -131,6 +132,18 @@ def generateTCPPacket(msg, sourceIP, destIP, flag, seqNum, ackNum):
 	# Add IP header and return
     return generateIPPacket(packet, sourceIP, destIP)
 
+def decode_ethernet_header(packet):
+    #parse ethernet header
+    eth_length = 14
+    eth_header = packet[:eth_length]
+    eth = unpack('!6s6sH' , eth_header)
+    eth_protocol = socket.ntohs(eth[2])
+    print 'Destination MAC : ' + eth_addr(packet[0:6]) + ' Source MAC : ' + eth_addr(packet[6:12]) + ' Protocol : ' + str(eth_protocol)
+ 
+
+
+
+
 # Decode IP header and store in a map
 def decodeIPHeader(packet):
     ip_header = packet[0:20]
@@ -208,7 +221,9 @@ def decodeTCPHeader(packet_long):
     
     return mapHeader
     
-   
+
+
+
 #Check IP Header
 def checkIPHeader(packet, mapIP, destIP):
 	if 6 != mapIP['protocol']:
@@ -259,7 +274,8 @@ def timeOutRecv(recvsock, size):
 	if ready[0]:
 		response = recvsock.recvfrom(size)
 		# ethernet_frame = response[0]
-		# tcp_frame = ethernet_frame[14:]
+		# ethernet_dict = decode_ethernet_header(response[0])
+
 	else:
 		# handleError("Time out!")
 		print "Time out! Retransmit"
@@ -270,6 +286,7 @@ def timeOutRecv(recvsock, size):
 
 def nonBlockTransmit(packet, recvsock, size, sendsock):
 	response = timeOutRecv(recvsock, size)
+
 	i = 0
 	while not response:
 		sendsock.sendto(packet, (destIP , 0 ))
@@ -674,6 +691,7 @@ msg = generateGetRequest(path, host)
 
 # Send and get response using raw socket
 response = tcp_transmission(msg, host)
+# pdb.set_trace()
 # response = ethernet_transmission(msg,host)
 result = parse_result(fileName, response)
 

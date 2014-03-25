@@ -264,9 +264,7 @@ retransmit it. Your code must be able to receive out-of-order incoming packets a
 the correct order before delivering them to the higher-level, HTTP handling code. Your code should
 identify and discard duplicate packets. Finally, your code
 must implement a basic congestion window: your code should start with cwnd=1, and increment the cwnd
-after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd mus
-
-t be <=1000 at all times). If
+after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd must be <=1000 at all times). If
 your program observes a packet drop or a timeout, reset the cwnd to 1.
 </p><p>
 As with IP, your code must be defensive: check to ensure that all incoming packets have valid checksums
@@ -289,7 +287,9 @@ your code will not work when we grade it.
 For most of you, the VM option will probably be easiest. There are many
 <a href="http://www.howtogeek.com/howto/11287/how-to-run-ubuntu-in-windows-7-with-vmware-player/">tutorials</a>
 on how to do this.
-If you use Windows, you will need a (free) copy of VMWare Player, as well as an ISO of Ubuntu. Once
+If you use Windows, you will need a (free) copy of VMWare Player
+
+, as well as an ISO of Ubuntu. Once
 you have your VM set up, you will need to install development tools. Exactly what you need will depend
 on what language you want to program in. There are ample instructions online explaining how to install
 gcc, Java, and Python-dev onto Ubuntu.
@@ -352,7 +352,9 @@ The turn-in script will not accept submissions that are missing a README or a Ma
 wish; only the last submission will be graded, and the time of the last submission will determine
 whether your assignment is late.
 </p><p>
-<h2>Grading</h2>
+<h2>Grading</
+
+h2>
 This project is worth 16 points. You will receive full credit if 1) your code compiles, runs, and correctly
 downloads files over HTTP, 2) you have not used any illegal libraries, and 3) you use the correct type of
 raw socket. All student code will be scanned by plagarism
@@ -416,8 +418,6 @@ implemented Ethernet functionality, and any additional challenges your faced (e.
     </p>
     </div>
     </html>
-
-
 
 
 

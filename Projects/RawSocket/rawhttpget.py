@@ -20,7 +20,7 @@ false = 0
 true = 1
 
 
-def checkSum(msg):
+def check_sum(msg):
 	s = 0
 	for i in range(0, len(msg), 2):
 		# differnt from tutorial
@@ -43,7 +43,7 @@ def get_port():
 	sPort.close()
 	return port
 
-def gen_local_ip(host):
+def get_local_up(host):
   ipAddress = ''
   try:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -81,7 +81,7 @@ def generate_ip_packet(msg, sourceIP, destIP):
 	return packet
 
 # Generate the packet with TCP and IP header
-def generate_tcp_packet(msg, sourceIP, destIP, flag, seqNum, ackNum):
+def generate_tcp_packet(send_sock_type, msg, sourceIP, destIP, flag, seqNum, ackNum):
     # print "Generating TCP packet..."
     # TCP header fields
     tcp_sourcePort = SOURCE_PORT #Get the port generated
@@ -123,7 +123,7 @@ def generate_tcp_packet(msg, sourceIP, destIP, flag, seqNum, ackNum):
     pseudoHeader = pseudoHeader + tcp_header + msg
     
     # Calculate checksum
-    tcp_checksum = checkSum(pseudoHeader)
+    tcp_checksum = check_sum(pseudoHeader)
     
     # Assemble TCP header in order
     tcp_header = pack('!HHLLBBH' , tcp_sourcePort, tcp_destPort, tcp_seqNum, tcp_ackNum, tcp_dataOffSet_reserve, tcp_flags,  tcp_window) + pack('H', tcp_checksum) + pack('!H', tcp_urgPointer)
@@ -133,13 +133,24 @@ def generate_tcp_packet(msg, sourceIP, destIP, flag, seqNum, ackNum):
 	# Add IP header and return
     return generate_ip_packet(packet, sourceIP, destIP)
 
-def validate_ethernet_header(packet, local_mac, remote_mac):
-    #parse ethernet header
-    eth_length = 14
-    eth_header = packet[:eth_length]
-    eth = unpack('!6s6sH' , eth_header)
-    eth_protocol = socket.ntohs(eth[2])
-    print 'Destination MAC : ' + eth_addr(packet[0:6]) + ' Source MAC : ' + eth_addr(packet[6:12]) + ' Protocol : ' + str(eth_protocol)
+def validate_ethernet_header(ethernet_dict):
+	global LocalMac
+	global RemoteMac
+	if ethernet_dict['local_mac']!=LocalMac:
+		return false
+	elif ethernet_dict['remote_mac']!=RemoteMac:
+		return false
+	return true
+
+
+def decode_ethernet_packet(packet):
+	eth_length = 14
+	eth_header = packet[:eth_length]
+	eth = unpack('!6s6sH' , eth_header)
+	eth_protocol = socket.ntohs(eth[2])
+	print 'Destination MAC : ' + eth_addr(packet[0:6]) + ' Source MAC : ' + eth_addr(packet[6:12]) + ' Protocol : ' + str(eth_protocol)
+
+
 
 # Decode IP header and store in a map
 def decode_ip_packet(packet):
@@ -184,91 +195,85 @@ def decode_tcp_packet(packet_long):
     packet_dict["urgPointer"] = int(ord(packet[18])<<8)+int(ord(packet[19]))
     packet_dict["data"] = packet[packet_dict["dataOffSet"]:]
     # 
-    # jj = decode_tcp_packet2(packet_long)
-    # if packet_dict['seqNum']!= jj['seqNum']:
-    # 	print '!!!!!!!! seqNum not same.'
-    # if packet_dict['ackNum']!=jj['ackNum']:
-    # 	print '!!!!!!!! ackNum not same.'
-    
     return packet_dict
     
-
-
-
 #Check IP Header
-def checkIPHeader(packet, mapIP, destIP):
-	if destIP != mapIP['sourceIP']:
+def check_ip_packet(packet, ip_dict, destIP):
+	if destIP != ip_dict['sourceIP']:
 		print "Ip mismatch."
 		return false
-	if 6 != mapIP['protocol']:
+	if 6 != ip_dict['protocol']:
 		print "Protocol type mismatch."
 		return false
 	return true
 
 #Check TCP header
-def checkTCPHeader(packet, mapTCP, seqNum, ackNum, msgLen):
-	print 'checking tcp header...'
-	if mapTCP['destPort']!=SOURCE_PORT:
-		print 'The destPort of this packet is not the source port of sending socket!!'
-	if (seqNum + msgLen) != mapTCP['ackNum']:
-		print "tcp seq mine:", seqNum+msgLen, " received:", mapTCP['ackNum'], "msglen", msgLen
+def check_tcp_packet(packet, tcp_dict, seqNum, ackNum, msgLen):
+	# print 'checking tcp header...'
+	if tcp_dict['destPort']!=SOURCE_PORT:
+		print 'Port number mismatch.'
+	if (seqNum + msgLen) != tcp_dict['ackNum']:
+		print 'SeqNum mismatch.'
 		return false
-	if ackNum != mapTCP['seqNum']:
-		if mapTCP.get('syn') != 1 and mapTCP.get('ack') == 1:
-			print "tcp ack"
+	if ackNum != tcp_dict['seqNum']:
+		if tcp_dict.get('syn') != 1 and tcp_dict.get('ack') == 1:
+			print "AckNum mismatch."
 			return false
 	return true
 
-def checkPacket(packet, mapIP, mapTCP, sentSeq, sentAck, sentMsgLen, sendsock):
-	print "Validating Packet..."
-	headerIPlen = mapIP['headerLen']*4
+def check_packet(packet, ip_dict, tcp_dict, sentSeq, sentAck, sentMsgLen, send_sock):
+	# print "Validating Packet..."
+	headerIPlen = ip_dict['headerLen']*4
 	packetTCP = packet[headerIPlen:]
 	packetIP = packet[0:headerIPlen]
-	print 'sent ack: '+ str(sentAck)
-	print 'sent seqNum: '+str(sentSeq)+' parsed seqNum: '+str(mapTCP['seqNum'])
-	tcp_validation = checkTCPHeader(packetTCP, mapTCP, sentSeq, sentAck, sentMsgLen)
-	ip_validation = checkIPHeader(packetIP, mapIP, destIP)
+	# print 'sent ack: '+ str(sentAck)
+	# print 'sent seqNum: '+str(sentSeq)+' parsed seqNum: '+str(tcp_dict['seqNum'])
+	tcp_validation = check_tcp_packet(packetTCP, tcp_dict, sentSeq, sentAck, sentMsgLen)
+	ip_validation = check_ip_packet(packetIP, ip_dict, destIP)
 	if not tcp_validation or not ip_validation:
-		'''This rst may fail because of the iptable blocking'''
-		if not tcp_validation:
-			print tcp_validation
-			print 'TCP header fails.'
-		if not ip_validation:
-			print ip_validation
-			print 'IP header fails.'
+		# if not tcp_validation:
+		# 	print tcp_validation
+		# 	print 'TCP header fails.'
+		# if not ip_validation:
+		# 	print ip_validation
+		# 	print 'IP header fails.'
 
-		print 'errrrrrr'
+		# print 'errrrrrr'
 		return false
 	return true
 
 #Handle ack time out
-def timeOutRecv(recvsock, size):
+def time_out_recev(recv_sock_type,recv_sock, size):
+
+	print recv_sock_type
 	timeout = 60
-	ready = select.select([recvsock], [], [], timeout)
+	ready = select.select([recv_sock], [], [], timeout)
 	if ready[0]:
-		response = recvsock.recvfrom(size)
-		# ethernet_frame = response[0]
-		# ethernet_dict = validateer(response[0])
+		# don't need to validate tcp packet here
+		if recv_sock_type=='ip':
+			response = recv_sock.recvfrom(size)
+			return response
+		elif recv_sock_type=='ethernet':
+			response = recv_sock.recvfrom(size)
+			return response
 
 	else:
-		# handleError("Time out!")
 		print "Time out! Retransmit"
 		return false
-	print 'timeOutRecv competed.'
 	# return (tcp_frame, response[1])
-	return response
+	# return response
 
-def nonBlockTransmit(packet, recvsock, size, sendsock):
-	response = timeOutRecv(recvsock, size)
+def transmit(recv_sock_type, packet, recv_sock, size, send_sock):
+	response = time_out_recev(recv_sock_type, recv_sock, size)
 
 	i = 0
 	while not response:
-		sendsock.sendto(packet, (destIP , 0 ))
+		send_sock.sendto(packet, (destIP , 0 ))
 		i = i + 1
 		if i == 5:
 			handleError("3 Transmission Connection failure")
 			break;
-		response = timeOutRecv(recvsock, size)
+		response = time_out_recev(recv_sock_type,recv_sock, size)
 	
 	return response
 
@@ -277,180 +282,198 @@ def eth_addr (a) :
   b = "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x" % (ord(a[0]) , ord(a[1]) , ord(a[2]), ord(a[3]), ord(a[4]) , ord(a[5]))
   return b
 
-def three_way_handshake(host):
+def three_way_handshake(host, send_sock_type, recv_sock_type):
 	global sourceIP
 	global destIP
 	sourceIP = socket.gethostbyname(socket.gethostname())#Get local IP
 	# If falsed by hosts file use another method
 	if sourceIP[0:3] == '127':
-		sourceIP = gen_local_ip(host)
+		sourceIP = get_local_up(host)
 	destIP= socket.gethostbyname(host)
 	# Create two raw sockets, one for sending and one for receiving
 	try:
-		sendsock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+		if send_sock_type=='ip':
+			send_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+		elif send_sock_type=='ethernet':
+			send_sock = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(0x0003))
 	except socket.error , msg:
 		handleError("Sending socket could not be created. " + str(msg[0]) + " " + msg[1])
 	# Receiving socket is created in IPPROTO_TCP which could receive both IP and TCP headers
 	try:
-		# recvsock = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(0x0003))
-		recvsock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+		if recv_sock_type=='ip':
+			recv_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+		elif recv_sock_type=='ethernet':
+			recv_sock = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(0x0003))
 	except socket.error , msg:
 		handleError("Receiving socket could not be created. " + str(msg[0]) + " " + msg[1])
 	
-	'''Connection setup: three handshakes'''
+
+
+	# 
 	synMsg = ''
 	seqNum = 4321 # Starting seq number
 	ackNum = 0
-	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'syn', seqNum, ackNum)
+	packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'syn', seqNum, ackNum)
 	# First syn handshake
-	sendsock.sendto(packet, (destIP , 0 ))
-	response, addr =  nonBlockTransmit(packet, recvsock, 2048, sendsock)
-	mapIP = decode_ip_packet(response)
-	headerIPlen = mapIP['headerLen']*4
-	mapTCP = decode_tcp_packet(response[headerIPlen:])#headerIPlen*4!?
-	# mapTCP = decode_tcp_packet(response)
+	send_sock.sendto(packet, (destIP , 0 ))
+	response, addr =  transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
+	# 
+	ip_dict = decode_ip_packet(response)
+	headerIPlen = ip_dict['headerLen']*4
+	tcp_dict = decode_tcp_packet(response[headerIPlen:])#headerIPlen*4!?
+	# tcp_dict = decode_tcp_packet(response)
 	#Validate packet
-	while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, 1, sendsock)==false:
-		response, addr =  nonBlockTransmit(packet, recvsock, 2048, sendsock)
-		mapIP = decode_ip_packet(response)
-		headerIPlen = mapIP['headerLen']*4
+	while check_packet(response, ip_dict, tcp_dict, seqNum, ackNum, 1, send_sock)==false:
+		response, addr =  transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
+		ip_dict = decode_ip_packet(response)
+		headerIPlen = ip_dict['headerLen']*4
 		# 
-		mapTCP = decode_tcp_packet(response[headerIPlen:])#headerIPlen*4!?
+		tcp_dict = decode_tcp_packet(response[headerIPlen:])#headerIPlen*4!?
 
-	print "Connection established?????????"
-	if mapTCP.get('syn') == 1 and mapTCP.get('ack') == 1:
-		seqNum = mapTCP['ackNum']
-		ackNum = mapTCP['seqNum']+1
-		packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
-		sendsock.sendto(packet, (destIP , 0 ))
+	# print "Connection established?????????"
+	if tcp_dict.get('syn') == 1 and tcp_dict.get('ack') == 1:
+		seqNum = tcp_dict['ackNum']
+		ackNum = tcp_dict['seqNum']+1
+		packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+		send_sock.sendto(packet, (destIP , 0 ))
 	#Handshake end, connection established
-	return [sendsock, recvsock, seqNum, ackNum]
+	return [send_sock, recv_sock, seqNum, ackNum]
 
-def connection_tear_down_by_server(sendsock, recvsock, seqNum, ackNum):
+def connection_tear_down_by_server(send_sock_type, recv_sock_type,send_sock, recv_sock, seqNum, ackNum):
 	'''Receivd fin, tear down connection'''
 	synMsg = ''
-	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
-	sendsock.sendto(packet, (destIP , 0 ))
-	response, addr = timeOutRecv(recvsock, 2048)
-	mapIP = decode_ip_packet(response)
-	headerIPlen = mapIP['headerLen']
-	mapTCP = decode_tcp_packet(response[headerIPlen:])
-	if mapTCP['ack'] == 1:
+	packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
+	send_sock.sendto(packet, (destIP , 0 ))
+	response, addr = time_out_recev(recv_sock_type,recv_sock, 2048)
+	ip_dict = decode_ip_packet(response)
+	headerIPlen = ip_dict['headerLen']
+	tcp_dict = decode_tcp_packet(response[headerIPlen:])
+	if tcp_dict['ack'] == 1:
 		print "receive succceed:", len(receivedMsg)
 	# Close sockets
-	sendsock.close()
-	recvsock.close()
+	send_sock.close()
+	recv_sock.close()
 	return true
 
-def connection_tear_down_by_client(sendsock, recvsock, seqNum, ackNum):
+def connection_tear_down_by_client(send_sock, recv_sock, seqNum, ackNum):
 	synMsg = ''
-	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
-	sendsock.sendto(packet, (destIP , 0 ))
-	response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-	mapIP = decode_ip_packet(response)
-	headerIPlen = mapIP['headerLen']*4
-	mapTCP = decode_tcp_packet(response[headerIPlen:])
-	# print 'mapTCP fin:' + str(mapTCP['fin'])
+	packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
+	send_sock.sendto(packet, (destIP , 0 ))
+	response, addr = transmit(recv_sock_type, packet, recv_sock, 65535, send_sock)
+	ip_dict = decode_ip_packet(response)
+	headerIPlen = ip_dict['headerLen']*4
+	tcp_dict = decode_tcp_packet(response[headerIPlen:])
+	# print 'tcp_dict fin:' + str(tcp_dict['fin'])
 	i = 0
-	while mapTCP['fin']!=1:
-		response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-		mapIP = decode_ip_packet(response)
-		headerIPlen = mapIP['headerLen']*4
-		mapTCP = decode_tcp_packet(response[headerIPlen:])
-		print 'mapTCP fin:' + str(mapTCP['fin'])
-		print mapTCP['fin']!=1
+	while tcp_dict['fin']!=1:
+		response, addr = transmit(recv_sock_type, packet, recv_sock, 65535, send_sock)
+		ip_dict = decode_ip_packet(response)
+		headerIPlen = ip_dict['headerLen']*4
+		tcp_dict = decode_tcp_packet(response[headerIPlen:])
+		print 'tcp_dict fin:' + str(tcp_dict['fin'])
+		print tcp_dict['fin']!=1
 		if i>30:#receive at most 30 promiscuous packets, then force to close down
 			break
 
-	seqNum = mapTCP['ackNum']
-	ackNum = mapTCP['seqNum']+1
-	packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
-	sendsock.sendto(packet, (destIP , 0 ))
+	seqNum = tcp_dict['ackNum']
+	ackNum = tcp_dict['seqNum']+1
+	packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+	send_sock.sendto(packet, (destIP , 0 ))
 	# Close sockets
-	sendsock.close()
-	recvsock.close()
+	send_sock.close()
+	recv_sock.close()
 	return true
 
 def tcp_transmission(msg, host):
 	global sourceIP
 	global destIP
 
-	connection = three_way_handshake(host)
+	send_sock_type = 'ip'
+	recv_sock_type = 'ip'
+	# recv_sock_type = 'ethernet'
+	
+	connection = three_way_handshake(host, send_sock_type, recv_sock_type)
 
-	sendsock = connection[0]
-	recvsock = connection[1]
+	send_sock = connection[0]
+	recv_sock = connection[1]
 	seqNum = connection[2]
 	ackNum = connection[3]
 
-	print 'Established! Starting to receive!!!!!!'
+	print 'Connection established, starting to recevie...'
 	
 	receivedMsg = ''
 	synMsg = ''
     # Assemble the message packet
-	packet = generate_tcp_packet(msg, sourceIP, destIP, 'ack', seqNum, ackNum)
+	packet = generate_tcp_packet(send_sock_type, msg, sourceIP, destIP, 'ack', seqNum, ackNum)
     # Send the packet 
-	sendsock.sendto(packet, (destIP , 0 ))
+	send_sock.sendto(packet, (destIP , 0 ))
     # Receive with the time out control method
-	response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
+	response, addr = transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
+
     # Decode IP header
-	mapIP = decode_ip_packet(response)
-	headerIPlen = mapIP['headerLen']*4
+	ip_dict = decode_ip_packet(response)
+	headerIPlen = ip_dict['headerLen']*4
     # Decode TCP header
-	mapTCP = decode_tcp_packet(response[headerIPlen:])
+	tcp_dict = decode_tcp_packet(response[headerIPlen:])
 	
     # Check the packet in various aspects
-	while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(msg), sendsock) == false:
-		response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
+	while check_packet(response, ip_dict, tcp_dict, seqNum, ackNum, len(msg), send_sock) == false:
+		response, addr = transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
 	    # Decode IP header
-		mapIP = decode_ip_packet(response)
-		headerIPlen = mapIP['headerLen']*4
+		ip_dict = decode_ip_packet(response)
+		headerIPlen = ip_dict['headerLen']*4
 	    # Decode TCP header
-		mapTCP = decode_tcp_packet(response[headerIPlen:])
+		tcp_dict = decode_tcp_packet(response[headerIPlen:])
     # Get the header total length
-	headerLength = mapTCP['dataOffSet']+headerIPlen
+	headerLength = tcp_dict['dataOffSet']+headerIPlen
 	msg_dict = {}
 	msg_arr = []
+
+	
+
     # Assemble and receive the remain message in a loop
-	while mapTCP['ack'] == 1 and mapTCP['fin'] == 0:
+	while tcp_dict['ack'] == 1 and tcp_dict['fin'] == 0:
 		# Get the data and assemble
 		thisMsg = response[headerLength:]
 		receivedMsg = receivedMsg + thisMsg
         # Get the next seq and ack
-		seqNum = mapTCP['ackNum']
-		ackNum = mapTCP['seqNum']+len(thisMsg)
+		seqNum = tcp_dict['ackNum']
+		ackNum = tcp_dict['seqNum']+len(thisMsg)
 
 		msg_dict[ackNum] = thisMsg
 		msg_arr.append(ackNum)
-		print 'seqNum: ' + str(mapTCP['seqNum'])
-		print 'msg len: ' + str(len(thisMsg))
+		# print 'seqNum: ' + str(tcp_dict['seqNum'])
+		# print 'msg len: ' + str(len(thisMsg))
         # Only ack to ones with data
 		if len(thisMsg) != 0:
-			packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
-			sendsock.sendto(packet, (destIP , 0 ))
+			packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+			send_sock.sendto(packet, (destIP , 0 ))
 		
 		# Repeat the receiving process
-		response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
+		response, addr = transmit(recv_sock_type, packet, recv_sock, 65535, send_sock)
 		
-		mapIP = decode_ip_packet(response)
-		headerIPlen = mapIP['headerLen']*4
-		mapTCP = decode_tcp_packet(response[headerIPlen:])
+		ip_dict = decode_ip_packet(response)
+		headerIPlen = ip_dict['headerLen']*4
+		tcp_dict = decode_tcp_packet(response[headerIPlen:])
 		
 
-		while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(synMsg), sendsock)==false:
-			response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-			mapIP = decode_ip_packet(response)
-			headerIPlen = mapIP['headerLen']*4
-			mapTCP = decode_tcp_packet(response[headerIPlen:])
+		while check_packet(response, ip_dict, tcp_dict, seqNum, ackNum, len(synMsg), send_sock)==false:
+			response, addr = transmit(recv_sock_type, packet, recv_sock, 65535, send_sock)
+			ip_dict = decode_ip_packet(response)
+			headerIPlen = ip_dict['headerLen']*4
+			tcp_dict = decode_tcp_packet(response[headerIPlen:])
 
-		headerLength = mapTCP['dataOffSet']+headerIPlen
+		headerLength = tcp_dict['dataOffSet']+headerIPlen
 
+	
 
-	seqNum = mapTCP['ackNum']
-	ackNum = mapTCP['seqNum']+1
+	seqNum = tcp_dict['ackNum']
+	ackNum = tcp_dict['seqNum']+1
+	print 'Transmission finished.'
 	print 'Tearing down connection...'
-	if connection_tear_down_by_server(sendsock,recvsock, seqNum, ackNum):
+	if connection_tear_down_by_server(send_sock_type, recv_sock_type,send_sock,recv_sock, seqNum, ackNum):
 		print 'Connection is disconnected.'
-
+	print 'Receivd '+ str(len(receivedMsg)) + 'bytes data.'
 	return receivedMsg
 
 
@@ -458,9 +481,9 @@ def ethernet_transmission(msg, host):
 	global sourceIP
 	global destIP
 	mac_address = get_mac_address(host)
-	connection = three_way_handshake(host)
-	sendsock = connection[0]
-	recvsock = connection[1]
+	connection = three_way_handshake(host, 'ethernet', 'ethernet')
+	send_sock = connection[0]
+	recv_sock = connection[1]
 	seqNum = connection[2]
 	ackNum = connection[3]
 
@@ -470,78 +493,120 @@ def ethernet_transmission(msg, host):
 	receivedMsg = ''
 	synMsg = ''
     # Assemble the message packet
-	packet = generate_tcp_packet(msg, sourceIP, destIP, 'ack', seqNum, ackNum)
+	packet = generate_tcp_packet(send_sock_type, msg, sourceIP, destIP, 'ack', seqNum, ackNum)
     # Send the packet 
-	sendsock.sendto(packet, (destIP , 0 ))
+	send_sock.sendto(packet, (destIP , 0 ))
     # Receive with the time out control method
-	response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
+	response, addr = transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
     # Decode IP header
-	mapIP = decode_ip_packet(response)
-	headerIPlen = mapIP['headerLen']*4
+	ip_dict = decode_ip_packet(response)
+	headerIPlen = ip_dict['headerLen']*4
     # Decode TCP header
-	mapTCP = decode_tcp_packet(response[headerIPlen:])
+	tcp_dict = decode_tcp_packet(response[headerIPlen:])
     # Check the packet in various aspects
-	while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(msg), sendsock) == false:
-		response, addr = nonBlockTransmit(packet, recvsock, 2048, sendsock)
+	while check_packet(response, ip_dict, tcp_dict, seqNum, ackNum, len(msg), send_sock) == false:
+		response, addr = transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
 	    # Decode IP header
 		
-		mapIP = decode_ip_packet(response)
-		headerIPlen = mapIP['headerLen']*4
+		ip_dict = decode_ip_packet(response)
+		headerIPlen = ip_dict['headerLen']*4
 	    # Decode TCP header
-		mapTCP = decode_tcp_packet(response[headerIPlen:])
+		tcp_dict = decode_tcp_packet(response[headerIPlen:])
     # Get the header total length
-	headerLength = mapTCP['dataOffSet']+headerIPlen
+	headerLength = tcp_dict['dataOffSet']+headerIPlen
 	msg_dict = {}
 	msg_arr = []
     # Assemble and receive the remain message in a loop
-	while mapTCP['ack'] == 1 and mapTCP['fin'] == 0:
+	while tcp_dict['ack'] == 1 and tcp_dict['fin'] == 0:
 		# Get the data and assemble
 		thisMsg = response[headerLength:]
 		receivedMsg = receivedMsg + thisMsg
         # Get the next seq and ack
-		seqNum = mapTCP['ackNum']
-		ackNum = mapTCP['seqNum']+len(thisMsg)
+		seqNum = tcp_dict['ackNum']
+		ackNum = tcp_dict['seqNum']+len(thisMsg)
 		msg_dict[ackNum] = thisMsg
 		msg_arr.append(ackNum)
-		print 'seqNum: ' + str(mapTCP['seqNum'])
+		print 'seqNum: ' + str(tcp_dict['seqNum'])
 		print 'msg len: ' + str(len(thisMsg))
         # Only ack to ones with data
 		if len(thisMsg) != 0:
-			packet = generate_tcp_packet(synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
-			sendsock.sendto(packet, (destIP , 0 ))
+			packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
+			send_sock.sendto(packet, (destIP , 0 ))
 		
 		# Repeat the receiving process
-		response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
+		response, addr = transmit(recv_sock_type, packet, recv_sock, 65535, send_sock)
 		
-		mapIP = decode_ip_packet(response)
-		headerIPlen = mapIP['headerLen']*4
-		mapTCP = decode_tcp_packet(response[headerIPlen:])
-		while checkPacket(response, mapIP, mapTCP, seqNum, ackNum, len(synMsg), sendsock)==false:
-			response, addr = nonBlockTransmit(packet, recvsock, 65535, sendsock)
-			mapIP = decode_ip_packet(response)
-			headerIPlen = mapIP['headerLen']*4
-			mapTCP = decode_tcp_packet(response[headerIPlen:])
+		ip_dict = decode_ip_packet(response)
+		headerIPlen = ip_dict['headerLen']*4
+		tcp_dict = decode_tcp_packet(response[headerIPlen:])
+		while check_packet(response, ip_dict, tcp_dict, seqNum, ackNum, len(synMsg), send_sock)==false:
+			response, addr = transmit(recv_sock_type, packet, recv_sock, 65535, send_sock)
+			ip_dict = decode_ip_packet(response)
+			headerIPlen = ip_dict['headerLen']*4
+			tcp_dict = decode_tcp_packet(response[headerIPlen:])
 
 
-		headerLength = mapTCP['dataOffSet']+headerIPlen
-	seqNum = mapTCP['ackNum']
-	ackNum = mapTCP['seqNum']+1
+		headerLength = tcp_dict['dataOffSet']+headerIPlen
+	seqNum = tcp_dict['ackNum']
+	ackNum = tcp_dict['seqNum']+1
 	print 'Tearing down connection...'
-	if connection_tear_down_by_server(sendsock,recvsock, seqNum, ackNum):
+	if connection_tear_down_by_server(send_sock_type,send_sock,recv_sock, seqNum, ackNum):
 		print 'Connection is disconnected.'
 	return receivedMsg
 
 
 
 def get_mac_address(host):
-	connection = three_way_handshake(host)
-	sendsock = connection[0]
-	recvsock = connection[1]
+	global LocalMac
+	global RemoteMac
+
+	sourceIP = socket.gethostbyname(socket.gethostname())#Get local IP
+	# If falsed by hosts file use another method
+	if sourceIP[0:3] == '127':
+		sourceIP = get_local_up(host)
+	destIP= socket.gethostbyname(host)
+	# Create two raw sockets, one for sending and one for receiving
+	try:
+		send_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+	except socket.error , msg:
+		handleError("Sending socket could not be created. " + str(msg[0]) + " " + msg[1])
+	# Receiving socket is created in IPPROTO_TCP which could receive both IP and TCP headers
+	try:
+		recv_sock = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(0x0003))
+	except socket.error , msg:
+		handleError("Receiving socket could not be created. " + str(msg[0]) + " " + msg[1])
+
+	synMsg = ''
+	seqNum = 4321 # Starting seq number
+	ackNum = 0
+	packet = generate_tcp_packet('ip', synMsg, sourceIP, destIP, 'syn', seqNum, ackNum)
+	# First syn handshake
+	send_sock.sendto(packet, (destIP , 0 ))
+
+	response, addr = time_out_recev('ethernet', recv_sock, 2048)
+
+	ip_packet = response[14:]
+	ip_dict = decode_ip_packet(ip_packet)
+	tcp_packet = response[34:]
+	tcp_dict = decode_tcp_packet(tcp_packet)
+	# while check_packet(ip_packet, ip_dict, tcp_dict, seqNum, ackNum, 1, send_sock)
+# (packet, ip_dict, tcp_dict, sentSeq, sentAck, sentMsgLen, send_sock):
+	pdb.set_trace()
+
+
+	connection = three_way_handshake(host, 'ip', 'ethernet')
+	send_sock = connection[0]
+	recv_sock = connection[1]
 	seqNum = connection[2]
 	ackNum = connection[3]
 
+
+	LocalMac = connection[4]
+	RemoteMac = connection[5]
+
+
 	print 'Tearing down connection...'
-	if connection_tear_down_by_client(sendsock,recvsock, seqNum, ackNum):
+	if connection_tear_down_by_client(send_sock,recv_sock, seqNum, ackNum):
 		print 'Connection is disconnected.'
 	return [local_mac, remote_mac]
 
@@ -608,28 +673,17 @@ def getPath(url):
     return '/'
 
 # Form get request
-def generateGetRequest(path, host):
-    get_request = 'GET '+path+' HTTP/1.1\r\n'\
-+'Host: '+ host + '\r\n'\
-+'Connection: keep-alive\r\n'\
-+'\r\n\r\n'
-    print "generated get:", get_request
-    return get_request
-
-
-def handleSendingMsg(msg, host):
-    print "handle start"
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, PORT))
-    sock.send(msg)
-    rescMsg = ''
-    while 1:
-        rescData = sock.recv(8192)
-        if not rescData: break
-        rescMsg += rescData
-    sock.close()
-    print "handle end"
-    return rescMsg
+def get_request(path, host):
+	get_request = 'GET '+path+' HTTP/1.1\r\n'\
+	+'Host: '+ host + '\r\n'\
+	+'Connection: keep-alive\r\n'\
+	+'\r\n\r\n'
+	# +'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:28.0) Gecko/20100101 Firefox/28.0'\
+	# +'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'\
+	# +'Accept-Language: en-US,en;q=0.5'\
+	# +'Accept-Encoding: gzip, deflate'\
+	# +'Cookie: __utma=135809699.960683796.1395449745.1395613813.1395781399.8; __utmz=135809699.1395449745.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); __utmb=135809699.1.10.1395781399; __utmc=135809699'\
+	return get_request
 
 def parse_result(file_name, content):
 	
@@ -638,17 +692,17 @@ def parse_result(file_name, content):
 		html_content = re.sub('\\n.{1,4}\\r', '\n\r', content)
 		splitPoint = html_content.find('\r\n\r\n\r\n') + 6
 		parsed = html_content[splitPoint:]
-		return parsed
+		ending = parsed.find('</html>')
+		return parsed[0:ending+7]
 	# just split from \r\n\r\n
 	file_content = content[content.find('\r\n\r\n')+4:]
+
 	return file_content
 
 
 SOURCE_PORT = get_port()
-print "got source port:", SOURCE_PORT
+print "Source port:", SOURCE_PORT
 
-host = ''
-path = ''
 
 if len(sys.argv) == 2:
     url = sys.argv[1]
@@ -661,14 +715,21 @@ print "fileName", fileName
 host = getHost(url)
 path = getPath(url)
 
-# get_mac_address(host)
-# Construct get message
-msg = generateGetRequest(path, host)
+LocalMac = ''
+RemoteMac = ''
 
-# Send and get response using raw socket
-response = tcp_transmission(msg, host)
-# pdb.set_trace()
-# response = ethernet_transmission(msg,host)
-result = parse_result(fileName, response)
+get_mac_address(host)
 
-writeFile(result, fileName)
+
+
+# # Construct get message
+# msg = get_request(path, host)
+
+# # Send and get response using raw socket
+# response = tcp_transmission(msg, host)
+# # response = ethernet_transmission(msg,host)
+# result = parse_result(fileName, response)
+
+# # print 'Receivd '+ str(len(result)) + 'bytes data.'
+
+# writeFile(result, fileName)

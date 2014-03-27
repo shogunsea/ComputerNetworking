@@ -20,7 +20,7 @@ false = 0
 true = 1
 
 
-def check_sum(msg):
+def tcp_check_sum(msg):
 	s = 0
 	for i in range(0, len(msg), 2):
 		# differnt from tutorial
@@ -43,7 +43,7 @@ def get_port():
 	sPort.close()
 	return port
 
-def get_local_up(host):
+def get_local_ip(host):
   ipAddress = ''
   try:
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -54,8 +54,38 @@ def get_local_up(host):
     pass
   return ipAddress 
 
+def generate_ethernet_packet(ip_packet):
+	global RemoteMac
+	global LocalMac
+	protocol = socket.htons(8)#ip protocol
+	dest_mac = RemoteMac
+	souce_mac = LocalMac
+
+	ethernet_packet = pack('!6s6sH', dest_mac, souce_mac, protocol)
+	return ethernet_packet+ip_packet
+
+def ip_check_sum(data):  # Form the standard IP-suite checksum
+	pos = len(data)
+	if (pos & 1):  # If odd...
+		pos -= 1
+		check_sum = ord(data[pos])  # Prime the check_sum with the odd end byte
+	else:
+		check_sum = 0
+
+	#Main code: loop to calculate the checkcheck_sum
+	while pos > 0:
+		pos -= 2
+		check_sum += (ord(data[pos + 1]) << 8) + ord(data[pos])
+
+	check_sum = (check_sum >> 16) + (check_sum & 0xffff)
+	check_sum += (check_sum >> 16)
+
+	result = (~ check_sum) & 0xffff #Keep lower 16 bits
+	result = result >> 8 | ((result & 0xff) << 8)  # Swap bytes
+	return result
+
 # Generate IP header and add it to the packet
-def generate_ip_packet(send_sock_type,msg, sourceIP, destIP):
+def generate_ip_packet(send_sock_type, msg, sourceIP, destIP):
 	# IP header fields
 	# print "Generating IP packet..."
 	ip_version = 4 # Version ipv4
@@ -76,9 +106,15 @@ def generate_ip_packet(send_sock_type,msg, sourceIP, destIP):
 	
 	# Assemble ip packet
 	ip_header = pack('!BBHHHBBH4s4s' , ip_ver_ihl, ip_typeOfService, ip_totalLength, ip_id, ip_fragOffset, ip_ttl, ip_protocol, ip_checksum, ip_source, ip_dest)
-	packet = ip_header + msg
+	# 
+	ip_checksum = ip_check_sum(ip_header)
+	ip_header = pack('!BBHHHBBH4s4s' , ip_ver_ihl, ip_typeOfService, ip_totalLength, ip_id, ip_fragOffset, ip_ttl, ip_protocol, ip_checksum, ip_source, ip_dest)
+	ip_packet = ip_header + msg
 	# return generate
-	return packet
+	if send_sock_type=='ip':
+		return ip_packet
+	elif send_sock_type=='ethernet':
+		return generate_ethernet_packet(ip_packet)
 
 # Generate the packet with TCP and IP header
 def generate_tcp_packet(send_sock_type, msg, sourceIP, destIP, flag, seqNum, ackNum):
@@ -123,7 +159,7 @@ def generate_tcp_packet(send_sock_type, msg, sourceIP, destIP, flag, seqNum, ack
     pseudoHeader = pseudoHeader + tcp_header + msg
     
     # Calculate checksum
-    tcp_checksum = check_sum(pseudoHeader)
+    tcp_checksum = tcp_check_sum(pseudoHeader)
     
     # Assemble TCP header in order
     tcp_header = pack('!HHLLBBH' , tcp_sourcePort, tcp_destPort, tcp_seqNum, tcp_ackNum, tcp_dataOffSet_reserve, tcp_flags,  tcp_window) + pack('H', tcp_checksum) + pack('!H', tcp_urgPointer)
@@ -131,7 +167,7 @@ def generate_tcp_packet(send_sock_type, msg, sourceIP, destIP, flag, seqNum, ack
     packet = tcp_header + msg
 	
 	# Add IP header and return
-    return generate_ip_packet(send_sock_type,packet, sourceIP, destIP)
+    return generate_ip_packet(send_sock_type, packet, sourceIP, destIP)
 
 def validate_ethernet_packet(ethernet_packet):
 	global LocalMac
@@ -148,18 +184,17 @@ def validate_ethernet_packet(ethernet_packet):
 		return false
 	return true
 
-
 def decode_ethernet_packet(packet):
 	eth_length = 14
 	eth_header = packet[:eth_length]
 	eth = unpack('!6s6sH' , eth_header)
 	eth_protocol = socket.ntohs(eth[2])
 	# 
+	
 	dest_mac = packet[0:6]
 	source_mac = packet[6:12]
 	print 'Destination MAC : ' + eth_addr(packet[0:6]) + ' Source MAC : ' + eth_addr(packet[6:12]) + ' Protocol : ' + str(eth_protocol)
 	return [dest_mac, source_mac]
-
 
 # Decode IP header and store in a map
 def decode_ip_packet(packet):
@@ -203,7 +238,6 @@ def decode_tcp_packet(packet_long):
     packet_dict["checksum"] = int(ord(packet[16])<<8)+int(ord(packet[17]))
     packet_dict["urgPointer"] = int(ord(packet[18])<<8)+int(ord(packet[19]))
     packet_dict["data"] = packet[packet_dict["dataOffSet"]:]
-    # 
     return packet_dict
     
 #Check IP Header
@@ -240,17 +274,8 @@ def check_packet(packet, ip_dict, tcp_dict, sentSeq, sentAck, sentMsgLen, send_s
 	tcp_validation = check_tcp_packet(packetTCP, tcp_dict, sentSeq, sentAck, sentMsgLen)
 	ip_validation = check_ip_packet(packetIP, ip_dict, destIP)
 	if not tcp_validation or not ip_validation:
-		# if not tcp_validation:
-		# 	print tcp_validation
-		# 	print 'TCP header fails.'
-		# if not ip_validation:
-		# 	print ip_validation
-		# 	print 'IP header fails.'
-
-		# print 'errrrrrr'
 		return false
 	return true
-
 
 def mac_recv(recv_sock, size):
 	timeout = 60
@@ -261,13 +286,9 @@ def mac_recv(recv_sock, size):
 	else:
 		return false
 
-
-
-
 #Handle ack time out
 def time_out_recev(recv_sock_type,recv_sock, size):
-
-	print recv_sock_type
+	# print recv_sock_type
 	timeout = 60
 	ready = select.select([recv_sock], [], [], timeout)
 	if ready[0]:
@@ -276,20 +297,17 @@ def time_out_recev(recv_sock_type,recv_sock, size):
 			return response
 		elif recv_sock_type=='ethernet':#Check ethernet packet here!
 			ethernet_packet = recv_sock.recvfrom(size)
-			while validate_ethernet_packet(ethernet_packet[0])!=true:
-				ethernet_packet = recv_sock.recvfrom(size)
+			# while validate_ethernet_packet(ethernet_packet[0])!=true:
+			# 	ethernet_packet = recv_sock.recvfrom(size)
 			eth_pack = ethernet_packet[0]
-			return [eth_pack[14:], ethernet_packet[1]]
+			return [eth_pack[14:], ethernet_packet[1]]# once mac address validated, return ip packet.
 
 	else:
 		print "Time out! Retransmit"
 		return false
-	# return (tcp_frame, response[1])
-	# return response
 
 def transmit(recv_sock_type, packet, recv_sock, size, send_sock):
 	response = time_out_recev(recv_sock_type, recv_sock, size)
-
 	i = 0
 	while not response:
 		send_sock.sendto(packet, (destIP , 0 ))
@@ -309,17 +327,35 @@ def eth_addr (a) :
 def three_way_handshake(host, send_sock_type, recv_sock_type):
 	global sourceIP
 	global destIP
+	global SOURCE_PORT
+
+	SOURCE_PORT = get_port()
+
 	sourceIP = socket.gethostbyname(socket.gethostname())#Get local IP
 	# If falsed by hosts file use another method
 	if sourceIP[0:3] == '127':
-		sourceIP = get_local_up(host)
+		sourceIP = get_local_ip(host)
 	destIP= socket.gethostbyname(host)
 	# Create two raw sockets, one for sending and one for receiving
 	try:
 		if send_sock_type=='ip':
 			send_sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
 		elif send_sock_type=='ethernet':
-			send_sock = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(0x0003))
+			ETH_P_ALL = 3 # got this value from <net/ethernet.h> 
+			# send_sock = socket.socket( socket.AF_PACKET , socket.SOCK_RAW)#, socket.IPPROTO_IP)
+			# send_sock = socket.socket( socket.AF_PACKET , socket.SOCK_RAW , socket.ntohs(0x55aa))
+			send_sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)#, socket.htons(0x0003))
+			# send_sock.bind(('lo', 5454))
+			# send_sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2**30)
+			send_sock.bind(('eth2', 0))
+			# socket.socket(
+   #          socket.AF_PACKET, socket.SOCK_RAW, socket.htons(ETH_P_ALL))
+   #      self.ins.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 2**30)
+   #      self.ins.bind((self.interface_name, ETH_P_ALL))
+			# send_sock.bind(("eth2", 0x55aa))
+			# 
+			# send_sock.bind(("eth0", 0x0800))
+			# s.bind(("eth0", 0x0800))
 	except socket.error , msg:
 		handleError("Sending socket could not be created. " + str(msg[0]) + " " + msg[1])
 	# Receiving socket is created in IPPROTO_TCP which could receive both IP and TCP headers
@@ -336,9 +372,16 @@ def three_way_handshake(host, send_sock_type, recv_sock_type):
 	seqNum = 4321 # Starting seq number
 	ackNum = 0
 	packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'syn', seqNum, ackNum)
-	
+
+	# 
 	# First syn handshake
-	send_sock.sendto(packet, (destIP , 0 ))
+	# send_sock.sendto(packet, (destIP , 0 ))
+	
+	if send_sock_type=='ip':
+		send_sock.sendto(packet, (destIP , 0 ))
+	elif send_sock_type=='ethernet':
+		send_sock.send(packet)
+	
 	response, addr =  transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
 	# 
 	
@@ -360,17 +403,22 @@ def three_way_handshake(host, send_sock_type, recv_sock_type):
 		seqNum = tcp_dict['ackNum']
 		ackNum = tcp_dict['seqNum']+1
 		packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
-		send_sock.sendto(packet, (destIP , 0 ))
+		if send_sock_type=='ip':
+			send_sock.sendto(packet, (destIP , 0 ))
+		elif send_sock_type=='ethernet':
+			send_sock.send(packet)
 	#Handshake end, connection established
 	# connection_tear_down_by_client(send_sock,recv_sock, seqNum, ackNum)
 	
 	return [send_sock, recv_sock, seqNum, ackNum]
 
 def connection_tear_down_by_server(send_sock_type, recv_sock_type,send_sock, recv_sock, seqNum, ackNum):
-	'''Receivd fin, tear down connection'''
 	synMsg = ''
 	packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
-	send_sock.sendto(packet, (destIP , 0 ))
+	if send_sock_type=='ip':
+		send_sock.sendto(packet, (destIP , 0 ))
+	elif send_sock_type=='ethernet':
+		send_sock.send(packet)
 	response, addr = time_out_recev(recv_sock_type,recv_sock, 2048)
 	ip_dict = decode_ip_packet(response)
 	headerIPlen = ip_dict['headerLen']
@@ -456,8 +504,6 @@ def tcp_transmission(msg, host):
 	msg_dict = {}
 	msg_arr = []
 
-	
-
     # Assemble and receive the remain message in a loop
 	while tcp_dict['ack'] == 1 and tcp_dict['fin'] == 0:
 		# Get the data and assemble
@@ -510,22 +556,23 @@ def ethernet_transmission(msg, host):
 	global RemoteMac
 	global LocalMac
 
-	connection = three_way_handshake(host, 'ethernet', 'ethernet')
+	send_sock_type = 'ethernet'
+	recv_sock_type = 'ethernet'
+
+	connection = three_way_handshake(host, send_sock_type, recv_sock_type)
 	
 	send_sock = connection[0]
 	recv_sock = connection[1]
 	seqNum = connection[2]
 	ackNum = connection[3]
 	
-	print 'Established! Starting to receive!!!!!!'
-	'''Send the message and receive'''
-	#Initiated receive string
+	print 'Connection established, starting to received data...'
 	receivedMsg = ''
 	synMsg = ''
     # Assemble the message packet
-	packet = generate_tcp_packet(send_sock_type, msg, sourceIP, destIP, 'ack', seqNum, ackNum)
+	packet = generate_tcp_packet( send_sock_type, msg, sourceIP, destIP, 'ack', seqNum, ackNum)
     # Send the packet 
-	send_sock.sendto(packet, (destIP , 0 ))
+	send_sock.send(packet)#, (destIP , 0 ))
     # Receive with the time out control method
 	response, addr = transmit(recv_sock_type, packet, recv_sock, 2048, send_sock)
     # Decode IP header
@@ -544,8 +591,6 @@ def ethernet_transmission(msg, host):
 		tcp_dict = decode_tcp_packet(response[headerIPlen:])
     # Get the header total length
 	headerLength = tcp_dict['dataOffSet']+headerIPlen
-	msg_dict = {}
-	msg_arr = []
     # Assemble and receive the remain message in a loop
 	while tcp_dict['ack'] == 1 and tcp_dict['fin'] == 0:
 		# Get the data and assemble
@@ -554,15 +599,10 @@ def ethernet_transmission(msg, host):
         # Get the next seq and ack
 		seqNum = tcp_dict['ackNum']
 		ackNum = tcp_dict['seqNum']+len(thisMsg)
-		msg_dict[ackNum] = thisMsg
-		msg_arr.append(ackNum)
-		print 'seqNum: ' + str(tcp_dict['seqNum'])
-		print 'msg len: ' + str(len(thisMsg))
         # Only ack to ones with data
 		if len(thisMsg) != 0:
 			packet = generate_tcp_packet(send_sock_type, synMsg, sourceIP, destIP, 'ack', seqNum, ackNum)
 			send_sock.sendto(packet, (destIP , 0 ))
-		
 		# Repeat the receiving process
 		response, addr = transmit(recv_sock_type, packet, recv_sock, 65535, send_sock)
 		
@@ -575,8 +615,9 @@ def ethernet_transmission(msg, host):
 			headerIPlen = ip_dict['headerLen']*4
 			tcp_dict = decode_tcp_packet(response[headerIPlen:])
 
-
 		headerLength = tcp_dict['dataOffSet']+headerIPlen
+	
+
 	seqNum = tcp_dict['ackNum']
 	ackNum = tcp_dict['seqNum']+1
 	print 'Tearing down connection...'
@@ -590,10 +631,11 @@ def get_mac_address(host):
 	global LocalMac
 	global RemoteMac
 
+	print 'Starting to get mac address...'
 	sourceIP = socket.gethostbyname(socket.gethostname())#Get local IP
 	# If falsed by hosts file use another method
 	if sourceIP[0:3] == '127':
-		sourceIP = get_local_up(host)
+		sourceIP = get_local_ip(host)
 	destIP= socket.gethostbyname(host)
 	# Create two raw sockets, one for sending and one for receiving
 	try:
@@ -634,7 +676,7 @@ def get_mac_address(host):
 	send_sock.sendto(packet, (destIP , 0 ))
 	
 	# 
-	print 'Sending fin/ack packet...'
+	# print 'Sending fin/ack packet...'
 	packet = generate_tcp_packet('ip', synMsg, sourceIP, destIP, 'fin,ack', seqNum, ackNum)
 	send_sock.sendto(packet, (destIP , 0 ))
 
@@ -763,8 +805,6 @@ def parse_result(file_name, content):
 
 
 SOURCE_PORT = get_port()
-print "Source port:", SOURCE_PORT
-
 
 if len(sys.argv) == 2:
     url = sys.argv[1]
@@ -780,10 +820,8 @@ path = getPath(url)
 LocalMac = ''
 RemoteMac = ''
 
-#Will update LocalMac and RemoteMac
-# get_mac_address(host)
-
-
+# Will update LocalMac and RemoteMac
+get_mac_address(host)
 
 # Construct get message
 msg = get_request(path, host)

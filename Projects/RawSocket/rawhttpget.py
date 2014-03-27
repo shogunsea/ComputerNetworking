@@ -788,12 +788,12 @@ def get_request(path, host):
 	return get_request
 
 def parse_result(file_name, content):
-	
+	# pdb.set_trace()
 	extension = file_name[file_name.find('.'):]
 	if extension=='.html' or extension=='.php' or extension=='.jsp':
 		html_content = re.sub('\\n.{1,4}\\r', '', content)
 		# html_content = re.sub('\\n.{1,4}\\r', '\n\r', content)
-		splitPoint = html_content.find('\r\n\r\n\r\n') + 6
+		splitPoint = html_content.find('\r\n\r\n') + 4
 		parsed = html_content[splitPoint:]
 		ending = parsed.find('</html>')
 		return parsed[0:ending+7]
